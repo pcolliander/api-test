@@ -61,7 +61,7 @@
       ;; (println ":identity (:session request) " (:identity (:session request)))
         (println ":session request " (:session request))
         (println)
-      (if (authenticated? (:session request))
+      (if (authenticated? request)
         {:status 200 :body {:accounts [1 2 3] } }
         {:status 401 }
       ))
@@ -87,5 +87,5 @@
 
 ; TESTING
 ;; curl -c cookies.txt -X POST -F 'username=admin' -F 'password=pw' "http://localhost:3000/login"
-;; curl -b cookies.txt -I "http://localhost:3000/protected"
+;; curl -vi -b cookies.txt "http://localhost:3000/protected"
 
