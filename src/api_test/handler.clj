@@ -5,82 +5,65 @@
             [ring.middleware.defaults :refer :all]
             [ring.middleware.session :refer [wrap-session]]
 
+            [buddy.sign.jwt :as jwt]
+            [cheshire.core :as json]
             [buddy.auth.backends :as backends]
             [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
             [buddy.auth.backends.session :refer [session-backend]]
             [buddy.auth.accessrules :refer [restrict]]
             [buddy.auth :refer [authenticated? throw-unauthorized]]
-            [compojure.route :as route]
-            ))
-
-(use 'ring.middleware.session)
-(set! *warn-on-reflection* true)
+            [compojure.route :as route]))
 
 (def credentials 
   {:admin "pw" })
 
+(def secret "mysecret")
 
-(defroutes app-routes
-   (GET "/" request 
-        (println)
-        (println request)
-        (println (authenticated? request))
-        (println)
+; TOKENS (JWS)
+(defroutes app-routes-token
+  (GET "/" request
+       (if (authenticated? request) 
+           {:status 200}
+           (throw-unauthorized {:message "Not authorized"})))
 
-        (println (:session request))
-        (let [count (or ((:session request) :count) 0)
-              identity (or ((:session request) :identity) "anonymous") ]
+  (POST "/login" request
+        (let [username (get-in request [:params :username])
+              password (get-in request [:params :password])
+              found-password (credentials (keyword username))
+              token (jwt/sign {:user username} secret) ]
 
-        {:status 200 :session {:identity identity :count (inc count)}}))
-
-   (POST "/login" request 
-         (let [username (get-in request [:params :username])
-               password (get-in request [:params :password])
-               session (:session request)
-               found-password (credentials (keyword username))]
-
-           (println)
-           (println request)
-           (println)
-           (println "username: " username )
-           (println "password: " password )
-           (println "found-password " found-password)
+          (println) 
+          (println "username: "  username)
+          (println "password: "  password)
+          (println "found password "  found-password)
+          (println "token: " token)
 
            (if (and found-password (= password found-password))
-             {:status 200 :session (assoc (get-in request [:session]) :identity (keyword username)) :body {:desc (str "welcome "  username)}}
-             {:status 401 :body {:desc "you are not authorised"}})))
-  (GET "/logout" request
-       {:status 200 :session nil })
-
-   (GET "/protected" request
-        (println)
-      (println "REQUEST: " request)
-        (println)
-      (println (authenticated? request))
-      (println "boolean (:session request) " (boolean (:session request) ))
-      ;; (println ":identity (:session request) " (:identity (:session request)))
-        (println ":session request " (:session request))
-        (println)
-      (if (authenticated? request)
-        {:status 200 :body {:accounts [1 2 3] } }
-        {:status 401 }
-      ))
-
+             {:status 200 :body {:token token}}
+             {:status 401 :body {:desc "wrong password"}}
+           )
+        ))
   (route/not-found "Not Found"))
 
+
 (defn wrap-content-type [handler content-type]
-  (println "yoddliho")
   (fn [request]
     (let [response (handler request)]
       (assoc-in response [:headers "Content-Type"] content-type))))
 
-(def backend (session-backend))
+(defn my-unauthorized-handler [request metadata]
+  (println "metadata: " metadata)
+  {:status 403})
+
+(def jwt-token-backend (backends/jws 
+                         {:secret secret
+                          :unauthorized-handler my-unauthorized-handler}))
 
 (def app
-  (-> app-routes
+  (-> app-routes-token
     (wrap-content-type "application/json")
-    (wrap-authentication backend)
-    ;; (wrap-authorization backend)
+    (wrap-authentication jwt-token-backend)
+    (wrap-authorization jwt-token-backend)
     (compojure-handler/site)
     (json-middleware/wrap-json-body {:keywords? true})
     json-middleware/wrap-json-response))
