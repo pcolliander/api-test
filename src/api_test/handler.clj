@@ -5,6 +5,8 @@
             [ring.middleware.defaults :refer :all]
             [ring.middleware.session :refer [wrap-session]]
 
+            [mount.core :as mount]
+
             [buddy.sign.jwt :as jwt]
             [cheshire.core :as json]
             [buddy.auth.backends :as backends]
@@ -12,24 +14,58 @@
             [buddy.auth.backends.session :refer [session-backend]]
             [buddy.auth.accessrules :refer [restrict]]
             [buddy.auth :refer [authenticated? throw-unauthorized]]
-            [compojure.route :as route]))
+            [compojure.route :as route]
+            [api-test.db.core :as db]
+            ))
 
-(def credentials 
-  {:admin "pw" })
+(use 'ring.middleware.session)
+(set! *warn-on-reflection* true)
+
 
 (def secret "mysecret")
+
+(mount/start)
 
 ; TOKENS (JWS)
 (defroutes app-routes-token
   (GET "/" request
-       (if (authenticated? request) 
-           {:status 200}
-           (throw-unauthorized {:message "Not authorized"})))
+     (if (authenticated? request) 
+       {:status 200}
+       (throw-unauthorized {:message "Not authorized"}))))
+
+(defroutes app-routes
+   (GET "/" request 
+        (println)
+        (println request)
+        (println (authenticated? request))
+        (println)
+
+        (println (:session request))
+        (let [count (or ((:session request) :count) 0)
+              identity (or ((:session request) :identity) "anonymous") ]
+          )
+    )
+
+   (POST "/create-user" request
+        (let [username (get-in request [:params :username])
+              password (get-in request [:params :password])]
+              
+          (if (some? (db/get-user-by-username {:username username} ))
+            {:status 400 :body {:error "A user with that username exists already"}}
+            (do
+              (db/create-user! {:username username :password password})
+              {:status 201 }))
+        )
+    )
+
+   (GET "/ts" request
+      (println "the db function returned: "  (db/get-users))
+    )
 
   (POST "/login" request
         (let [username (get-in request [:params :username])
               password (get-in request [:params :password])
-              found-password (credentials (keyword username))
+              found-password (db/get-user-password-by-username {:username username})
               token (jwt/sign {:user username} secret) ]
 
           (println) 
@@ -45,11 +81,10 @@
         ))
   (route/not-found "Not Found"))
 
-
-(defn wrap-content-type [handler content-type]
-  (fn [request]
-    (let [response (handler request)]
-      (assoc-in response [:headers "Content-Type"] content-type))))
+;; (defn wrap-content-type [handler content-type]
+  ;; (fn [request]
+  ;;   (let [response (handler request)]
+  ;;     (assoc-in response [:headers "Content-Type"] content-type))))
 
 (defn my-unauthorized-handler [request metadata]
   (println "metadata: " metadata)
@@ -60,8 +95,8 @@
                           :unauthorized-handler my-unauthorized-handler}))
 
 (def app
-  (-> app-routes-token
-    (wrap-content-type "application/json")
+  (-> app-routes
+    ;; (wrap-content-type "application/json")
     (wrap-authentication jwt-token-backend)
     (wrap-authorization jwt-token-backend)
     (compojure-handler/site)
