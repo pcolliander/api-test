@@ -1,0 +1,14 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>My First Template</title>
+    </head>
+    <body>
+      <div id="app"></div>
+    </body>
+    <script type="text/javascript">
+       var context = "{{servlet-context}}";
+       var csrfToken = "{{csrf-token}}";
+    </script>
+		{% script "/js/app.js" %}
+</html>

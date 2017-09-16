@@ -1,13 +1,12 @@
 (ns api-test.db.core
   (:require
     [conman.core :as conman]
-    [mount.core :refer [defstate]]))
-    ;; [api-test.config :refer [env]])) ;; do I have this?
-
+    [mount.core :refer [defstate]]
+    [api-test.config :refer [env]]))
 
 (defstate ^:dynamic *db*
-  :start (conman/connect! {:jdbc-url "postgresql://localhost:5432/chat-service?user=pcolliander" })
+  :start (conman/connect! {:jdbc-url (env :database-url)})
          :stop (conman/disconnect! *db*))
                            
-(conman/bind-connection *db* "sql/queries.sql") ; what exactly does this do?
+(conman/bind-connection *db* "sql/queries.sql")
 
