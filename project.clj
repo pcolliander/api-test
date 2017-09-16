@@ -22,6 +22,7 @@
 
                  ; client-side
                  [org.clojure/clojurescript "1.9.908" :scope "provided"]
+                 [cljs-http "0.1.39"]
                  [reagent "0.7.0"]]
 
   :plugins [[lein-ring "0.9.7"]
@@ -37,10 +38,10 @@
 
   :ring {:handler api-test.handler/app}
 
-  :figwheel                                     
-		{:http-server-root "public"                   
-		 :nrepl-port 7002                             
-		 :css-dirs ["resources/public/css"]           
+  :figwheel
+		{:http-server-root "public"
+		 :nrepl-port 7002
+		 :css-dirs ["resources/public/css"]
 		 :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :clean-targets [:target-path "out"]
@@ -64,10 +65,10 @@
 											:externs       ["react/externs/react.js"]
 											:optimizations :none}}}}
 
-  :profiles 
+  :profiles
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring/ring-mock "0.3.0"]]}
-   
+
    :uberjar { :prep-tasks ["compile" ["cljsbuild" "once" "min"]]}
    })
 

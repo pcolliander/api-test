@@ -18,43 +18,40 @@
   ))
 
 (use 'hiccup.form)
-;; (set! *warn-on-reflection* true)
+(set! *warn-on-reflection* true)
+
 (def secret "mysecret")
 
 (mount/start)
 
-(defn redirect-with-token [token]
-  (assoc (redirect "/") :cookies {"token" {:value token :http-only true}})) ; make ":secure true" when I've got SSL.
+
+(defroutes auth-routes ;; later, add group related routes.
+  )
 
 (defroutes app-routes
-  (GET "/" request 
-     (if (authenticated? request) 
-       (render-file "templates/index.html" {})
-       (redirect "/login")))
 
-  (GET "/data" request
-     (if (authenticated? request)
-       {:status 200 :body {:data "123"}}
-       {:status 401 })
-   )
+  ; how can this route be authenticated with a token? The JS hasn't loaded yet, how can I set the auth header then? It's a browser GET request, how can I possibly set that header? 
+
+  (GET "/" request 
+     ;; (if (authenticated? request) 
+     (render-file "templates/index.html" {})
+      ;; (hiccup/html 
+        ;; [:div {:id "app"}]
+
+        ;; [:script {:src "js/api-test.js"}]
+  )
+       ;; (redirect "/login")))
 
   (POST "/create-user" request
-    (let [username (get-in request [:params :username])
-          password (get-in request [:params :password])
-          token (jwt/sign {:user username} secret) ]
-          
-      (if (some? (db/get-user-by-username {:username username} ))
-        {:status 400 :body {:error "A user with that username exists already"}}
-        (do
-          (db/create-user! {:username username :password password})
-          (redirect-with-token token)))
+        (let [username (get-in request [:params :username])
+              password (get-in request [:params :password])]
+              
+          (if (some? (db/get-user-by-username {:username username} ))
+            {:status 400 :body {:error "A user with that username exists already"}}
+            (do
+              (db/create-user! {:username username :password password})
+              {:status 201 :body {:desc "You have successfully signed up" }}))
   ))
-
-  (GET "/token" request
-     ; gives a new token, assumes the user is authenticated? No.
-     ; if :identity in session (set by /login /create-user route manually
-     ; or has an old expired token (just renew the token in that case?)
-  )
 
   (POST "/login" request
         (let [username (get-in request [:params :username])
@@ -64,13 +61,11 @@
               token (jwt/sign {:user username} secret) ]
 
            (if (and (some? found-password) (= password found-password))
-             (redirect-with-token token)
+             {:status 200 :body {:token token :desc "you logged in"}}
              {:status 401 :body {:desc "wrong password"}}
            )))
 
   (GET "/login" request
-    (if (authenticated? request)
-        (redirect "/")
      (hiccup/html 
        (form-to [:post "/login"]
           [:h2 "Sign in"]
@@ -82,34 +77,29 @@
           [:h2 "Sign up"]
           (text-field {:placeholder "username"} "username")
           (password-field {:placeholder "password"} "password")
-          (submit-button "signup")))
+          (submit-button "signup"))
     ))
 
   (route/not-found "Not Found"))
 
-; this must check expiry timestamp of JWT token at some point.
-(defn set-authorisation-header-from-cookie [handler]
-  (fn [request]
-    (if-let [token (get-in request [:cookies "token" :value])]
-      (handler (assoc-in request [:headers "authorization"] (str "Token " token)))
-      (handler request))))
+;; (defn wrap-content-type [handler content-type]
+  ;; (fn [request]
+  ;;   (let [response (handler request)]
+  ;;     (assoc-in response [:headers "Content-Type"] content-type))))
 
-(defn no-op [handler]
-  (fn [request]
-    (handler request)))
-
-(defn my-unauthorized-handler [request metadata] {:status 403})
+(defn my-unauthorized-handler [request metadata]
+  (println "metadata: " metadata) {:status 403})
 
 (def jwt-token-backend (backends/jws 
   {:secret secret :unauthorized-handler my-unauthorized-handler}))
 
 (def app
   (-> app-routes
+    ;; (wrap-content-type "application/json")
     (wrap-authentication jwt-token-backend)
     (wrap-authorization jwt-token-backend)
-    (set-authorisation-header-from-cookie)
     (compojure-handler/site)
     (wrap-resource "public")
     (json-middleware/wrap-json-body {:keywords? true})
-    json-middleware/wrap-json-response))
+      json-middleware/wrap-json-response))
 
