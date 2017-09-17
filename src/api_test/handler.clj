@@ -33,8 +33,9 @@
        (redirect "/login")))
 
   (GET "/data" request
+     (println request)
      (if (authenticated? request)
-       {:status 200 :body {:data "123"}}
+       {:status 200 :body {:data (get request :identity)}}
        {:status 401 })
    )
 

@@ -22,8 +22,11 @@
 
                  ; client-side
                  [org.clojure/clojurescript "1.9.908" :scope "provided"]
+                 [org.webjars/font-awesome "4.6.3"]
                  [cljs-http "0.1.39"]
-                 [reagent "0.7.0"]]
+                 [com.andrewmcveigh/cljs-time "0.5.0"]
+                 [reagent "0.7.0"]
+                 [re-frame "0.9.4"]]
 
   :plugins [[lein-ring "0.9.7"]
             [migratus-lein "0.5.2"]
@@ -49,7 +52,8 @@
 	{:builds
 		 {:app
 			{:source-paths ["src/cljs/api-test"]
-       :figwheel true; {:on-jsload "api-test.core/mount-root"}
+       ;; :figwheel true; {:on-jsload "api-test.core/mount-root"}
+       :figwheel {:on-jsload "api-test.core/mount-root"}
 			 :compiler
 										 {:main          "api-test.core"
 											:asset-path    "/js/out"
