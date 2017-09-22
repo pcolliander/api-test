@@ -7,13 +7,6 @@
 
 (enable-console-print!)
 
-;; (defn get-chats []
-;;   (go (let [response (<! (http-client/get "http://localhost:3000/chats"))]
-;;             (println "response " response)
-;;
-;;     (dispatch [:add-chats (:chats (:body response))] ))))
-  ;; )))
-
 (defn chat-view [{:keys [id name] }] 
   (let [active-chat @(subscribe [:active-chat])]
 
@@ -25,7 +18,6 @@
           :user-select "none" } 
         :on-click  #(dispatch [:change-active-chat id])
        } name ]))
-
 
 (defn user-view [{:keys [username is-online chat-id] } is-current-user]
   (let [active-chat @(subscribe [:active-chat])]
@@ -48,46 +40,49 @@
      (when is-current-user " (you)")]))
 
 (defn sidebar []
-  [:div {:style { 
-           :background "#303E4D"
-           :color "#c1c5ca"
-           :display "flex"
-           :flex-direction "column"
-           :justify-content "space-evenly"
-           :width "18%" } } 
+  (let [value (r/atom "")]
+    [:div {:style { 
+             :background "#303E4D"
+             :color "#c1c5ca"
+             :display "flex"
+             :flex-direction "column"
+             :justify-content "space-evenly"
+             :width "18%" } } 
 
-     [:div {:style {
-              :display "flex"
-              :flex-direction "column"
-              :margin-left "1.5rem"
-                    }}
-        [:h2 "Direct Messages"]
-        ;; [user-view {:id 3 :username (@(subscribe [:logged-in-user]) :username) :chat-id 6 :is-online true} true]
+       [:div {:style {
+                :display "flex"
+                :flex-direction "column"
+                :margin-left "1.5rem"
+                      }}
+          [:h2 "Direct Messages"]
 
-        ; the logged-in user should just be treated as a normal user, then I can render them all below. Compare the ids to know it's the logged in user.
-        (map user-view @(subscribe [:contacts]))]
+          ;; [user-view {:id 3 :username (@(subscribe [:logged-in-user]) :username) :chat-id 6 :is-online true} true]
+          ; the logged-in user should just be treated as a normal user, then I can render them all below. Compare the ids to know it's the logged in user.
+          (map user-view @(subscribe [:contacts]))]
 
-     [:div {:style {
-                    :flex-direction "column"
-                    :display "flex" 
-                    :margin-left "1.5rem"
-                    } } 
+       [:div {:style {
+                      :flex-direction "column"
+                      :display "flex" 
+                      :margin-left "1.5rem"
+                      } } 
 
-       [:div {:style {:align-items "center" :display "flex" }} 
-        [:h2 "Chats"] 
-        [:span {:style {
-                  :color "white"
-                  :cursor "pointer" 
-                  :font-weight "bold" 
-                  :font-size "xx-large"  
-                  :user-select "none"
-                  :margin-left "0.3rem" }
-                :on-click #(dispatch [:add-chat])
-               } "+"] 
-       ]
-        (into [:idv {:style {:display "flex" :flex-direction "column" }}] (map chat-view @(subscribe [:chats])))
-        ]
-   ])
+         [:div {:style {:align-items "center" :display "flex" }} 
+          [:h2 "Chats"] 
+          [:span {:style {
+                    :color "white"
+                    :cursor "pointer" 
+                    :font-weight "bold" 
+                    :font-size "xx-large"  
+                    :user-select "none"
+                    :margin-left "0.3rem" }
+                  :on-click #(dispatch [:add-chat @value])
+                 } "+"] 
+           [:input {:placeholder "chat name" :on-change #(reset! value (-> % .-target .-value ))}] 
+         ]
+          (into [:idv {:style {:display "flex" :flex-direction "column" }}] (map chat-view @(subscribe [:chats])))
+          ]]
+       )
+   )
 
 (defn message-view [{:keys [user timestamp value]} message]
     [:div {:style {:margin "0.5rem"}}
@@ -138,9 +133,7 @@
                    :placeholder "Write your message here." 
                    :value @value
                    } ]]
-      )
-  )
-)
+      )))
 
 (defn main []
   (dispatch [:init-db])

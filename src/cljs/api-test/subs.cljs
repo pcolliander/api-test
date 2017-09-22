@@ -9,7 +9,7 @@
 (reg-sub
   :chats
   (fn [db]
-    (:chats db)))
+    (sort-by :id (:chats db))))
 
 (reg-sub
   :contacts

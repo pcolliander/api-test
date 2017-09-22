@@ -25,8 +25,8 @@
                  ; client-side
                  [org.clojure/clojurescript "1.9.908" :scope "provided"]
                  [org.webjars/font-awesome "4.6.3"]
-                 ;; [cljs-http "0.1.39"]
-                 [cljs-ajax "0.7.2"]
+                 [cljs-http "0.1.39"]
+                 ;; [cljs-ajax "0.7.2"]
                  [com.andrewmcveigh/cljs-time "0.5.0"]
                  [reagent "0.7.0"]
                  [re-frame "0.9.4"]]

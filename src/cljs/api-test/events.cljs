@@ -12,7 +12,6 @@
   (fn [_ _]
     {
      :active-chat 1 
-     ;; :chats []
      :contacts [{:id 1 :chat-id 4 :username "Gretchen" :is-online true} {:id 2 :chat-id 5 :username "Auntie Abdil" :is-online false}]
      :logged-in-user {:id nil :username ""} 
      :messages [{:chat-id 1 :value "a message" :user "Pontus" :timestamp "some time"} 
@@ -48,18 +47,24 @@
     (go (let [response (<! (http-client/get "http://localhost:3000/chats"))
               chats (:chats (:body response))]
 
-          (dispatch [:get-chats-success (:chats (:body response))] )
+          (dispatch [:get-chats-success chats])
   ))))
 
-(reg-event-db
-  :add-chat
-  (fn [db [action id]]
-    ;; (def id (http-client/post "http://localhost:3000/chats" {:json-params {:name "some name of the chat" :is-private false}}))
-      (println "id after posting new chat " id)
-      
-      (println "db :" db)))
-      
 
+(reg-event-db
+  :add-chat-success
+  (fn [db [action payload]]
+    
+    (update-in db [:chats] conj payload)
+  ))
+
+(reg-event-fx
+  :add-chat
+  (fn [db [action name]]
+    (go (let [response (<! (http-client/post "http://localhost:3000/chats" {:json-params {:name name :is-private false}}))
+              chat-id (:chat-id (:body response))]
+      (dispatch [:add-chat-success {:id chat-id :name name :is-private false}])
+))))
 
 (reg-event-db
   :get-user-meta-data
