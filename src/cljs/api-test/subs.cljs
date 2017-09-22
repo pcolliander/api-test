@@ -20,3 +20,9 @@
   :messages
   (fn [db]
     (:messages db)))
+
+(reg-sub
+  :logged-in-user
+  (fn [db]
+    (:logged-in-user db)))
+

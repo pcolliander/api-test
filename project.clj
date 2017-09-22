@@ -20,10 +20,13 @@
                  [com.cemerick/piggieback "0.2.2"]
                  [ring/ring-defaults "0.2.1"]
 
+                 ;; [com.fzakaria/slf4j-timbre "0.2"]
+
                  ; client-side
                  [org.clojure/clojurescript "1.9.908" :scope "provided"]
                  [org.webjars/font-awesome "4.6.3"]
-                 [cljs-http "0.1.39"]
+                 ;; [cljs-http "0.1.39"]
+                 [cljs-ajax "0.7.2"]
                  [com.andrewmcveigh/cljs-time "0.5.0"]
                  [reagent "0.7.0"]
                  [re-frame "0.9.4"]]
@@ -33,7 +36,8 @@
             [lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.13"]]
 
-  :migratus {:store :database :db ~(get (System/getenv) "DATABASE_URL")}
+  ;; :migratus {:store :database :db ~(get (System/getenv) "DATABASE_URL)}
+  :migratus {:store :database :db "postgresql://localhost:5432/chat-service?user=pcolliander"}
   :jvm-opts ["-server" "-Dconf=.lein-env"]
 
   :resource-paths ["resources" "target/cljsbuild"]
@@ -57,6 +61,7 @@
 			 :compiler
 										 {:main          "api-test.core"
 											:asset-path    "/js/out"
+                      :preloads [re-frisk.preload]
 											:output-to     "target/cljsbuild/public/js/app.js"
 											:output-dir    "target/cljsbuild/public/js/out"
 											:optimizations :none
@@ -65,13 +70,16 @@
 			{:source-paths ["src/cljs"]
 			 :compiler
 										 {:output-to     "target/cljsbuild/public/js/app.js"
+                      :preloads [re-frisk.preload]
 											:output-dir    "target/uberjar"
 											:externs       ["react/externs/react.js"]
 											:optimizations :none}}}}
 
   :profiles
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                        [ring/ring-mock "0.3.0"]]}
+                        [ring/ring-mock "0.3.0"]
+                        [re-frisk "0.5.0"]
+                        ]}
 
    :uberjar { :prep-tasks ["compile" ["cljsbuild" "once" "min"]]}
    })

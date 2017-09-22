@@ -1,23 +1,22 @@
 (ns api-test.core
-  (:require [api-test.events]
-    [api-test.subs]
-    [reagent.core :as r]
-            [cljs.core.async :refer [<! >!]] 
-            [cljs-http.client :as http-client]
-            [re-frame.core :refer [subscribe dispatch]])
-  (:require-macros [cljs.core.async.macros :refer [go]]))
+  (:require 
+      [api-test.events]
+      [api-test.subs]
+      [reagent.core :as r]
+      [re-frame.core :refer [subscribe dispatch]]))
 
 (enable-console-print!)
 
-(def username (r/atom ""))
-
-(defn get-username []
-  (go (let [response (<! (http-client/get "http://localhost:3000/data"))]
-    (reset! username (-> (:user (:data (:body response))) clojure.string/capitalize)))))
-
+;; (defn get-chats []
+;;   (go (let [response (<! (http-client/get "http://localhost:3000/chats"))]
+;;             (println "response " response)
+;;
+;;     (dispatch [:add-chats (:chats (:body response))] ))))
+  ;; )))
 
 (defn chat-view [{:keys [id name] }] 
   (let [active-chat @(subscribe [:active-chat])]
+
     [:span {
         :style {
           :background (when (= id active-chat) "#6698c8")
@@ -49,47 +48,46 @@
      (when is-current-user " (you)")]))
 
 (defn sidebar []
-  (get-username)
-  (fn []
-    [:div {:style { 
-             :background "#303E4D"
-             :color "#c1c5ca"
-             :display "flex"
-             :flex-direction "column"
-             :justify-content "space-evenly"
-             :width "18%" } } 
+  [:div {:style { 
+           :background "#303E4D"
+           :color "#c1c5ca"
+           :display "flex"
+           :flex-direction "column"
+           :justify-content "space-evenly"
+           :width "18%" } } 
 
-       [:div {:style {
-                :display "flex"
-                :flex-direction "column"
-                :margin-left "1.5rem"
-                      }}
-          [:h2 "Direct Messages"]
-          [user-view {:id 3 :username @username :chat-id 6 :is-online true} true]
-          (map user-view @(subscribe [:contacts]))]
+     [:div {:style {
+              :display "flex"
+              :flex-direction "column"
+              :margin-left "1.5rem"
+                    }}
+        [:h2 "Direct Messages"]
+        ;; [user-view {:id 3 :username (@(subscribe [:logged-in-user]) :username) :chat-id 6 :is-online true} true]
 
-       [:div {:style {
-                      :flex-direction "column"
-                      :display "flex" 
-                      :margin-left "1.5rem"
-                      } } 
+        ; the logged-in user should just be treated as a normal user, then I can render them all below. Compare the ids to know it's the logged in user.
+        (map user-view @(subscribe [:contacts]))]
 
-         [:div {:style {:align-items "center" :display "flex" }} 
-          [:h2 "Chats"] 
-          [:span {:style {
-                    :color "white"
-                    :cursor "pointer" 
-                    :font-weight "bold" 
-                    :font-size "xx-large"  
-                    :user-select "none"
-                    :margin-left "0.3rem" }
-                  :on-click #(dispatch [:add-chat])
-                 } "+"] 
-         ]
-       
-          (into [:idv {:style {:display "flex" :flex-direction "column" }}] (map chat-view @(subscribe [:chats])))
-          ]
-     ]))
+     [:div {:style {
+                    :flex-direction "column"
+                    :display "flex" 
+                    :margin-left "1.5rem"
+                    } } 
+
+       [:div {:style {:align-items "center" :display "flex" }} 
+        [:h2 "Chats"] 
+        [:span {:style {
+                  :color "white"
+                  :cursor "pointer" 
+                  :font-weight "bold" 
+                  :font-size "xx-large"  
+                  :user-select "none"
+                  :margin-left "0.3rem" }
+                :on-click #(dispatch [:add-chat])
+               } "+"] 
+       ]
+        (into [:idv {:style {:display "flex" :flex-direction "column" }}] (map chat-view @(subscribe [:chats])))
+        ]
+   ])
 
 (defn message-view [{:keys [user timestamp value]} message]
     [:div {:style {:margin "0.5rem"}}
@@ -102,7 +100,7 @@
   (let [value (r/atom "")
         add-message #(if-not (-> % .-shiftKey)
                         (let [passed-value (-> % .-target .-value clojure.string/trim)]
-                          (dispatch [:add-message {:value  passed-value :chat-id @(subscribe [:active-chat]) :user @username :timestamp (.getTime (js/Date.))}])
+                          (dispatch [:add-message {:value  passed-value :chat-id @(subscribe [:active-chat]) :username (@(subscribe [:logged-in-user]) :username) :timestamp (.getTime (js/Date.))}])
                           (reset! value "")))]
     (fn []
       [:div {:style {
@@ -146,6 +144,8 @@
 
 (defn main []
   (dispatch [:init-db])
+  (dispatch [:get-chats])
+  (dispatch [:get-user-meta-data])
   (fn []
     [:div {:style {:display "flex" :height "100vh"}}
       [sidebar]

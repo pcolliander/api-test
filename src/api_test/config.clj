@@ -3,8 +3,6 @@
             [cprop.source :as source]
             [mount.core :refer [args defstate]]))
 
-(println "load config: " (load-config))
-
 (defstate env :start (load-config
                        :merge
                        [(args)

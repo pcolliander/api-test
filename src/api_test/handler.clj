@@ -7,6 +7,7 @@
              [compojure.core :refer :all]
              [compojure.handler :as compojure-handler] 
              [compojure.route :as route]
+             [conman.core :as conman]
              [selmer.parser :refer [render-file]]
              [hiccup.core :as hiccup]
              [mount.core :as mount]
@@ -26,6 +27,9 @@
 (defn redirect-with-token [token]
   (assoc (redirect "/") :cookies {"token" {:value token :http-only true}})) ; make ":secure true" when I've got SSL.
 
+(defn sign-jwt-token [{:keys [id username]}]
+  (jwt/sign {:id id :username username } secret))
+
 (defroutes app-routes
   (GET "/" request 
      (if (authenticated? request) 
@@ -33,39 +37,49 @@
        (redirect "/login")))
 
   (GET "/data" request
-     (println request)
      (if (authenticated? request)
        {:status 200 :body {:data (get request :identity)}}
-       {:status 401 })
-   )
+       {:status 401 }))
 
-  (POST "/create-user" request
+  (GET "/chats" request 
+
+       (let [user-id ((get request :identity) :id)
+             chats (db/get-chats {:user_id user-id})]
+         
+         {:status 200 :body {:chats chats}}))
+
+  (POST "/chats" request
+    (let [{:keys [name is-private]} (:body request)
+          user-id ((get request :identity) :id)]
+
+        (def chat-id (:id (db/add-chat! {:name name :is-private is-private})))
+        (db/add-chat-permission! {:chat_id chat-id :user_id user-id})
+
+      {:status 201 :body {:chat-id chat-id}}))
+
+  (POST "/users" request
     (let [username (get-in request [:params :username])
-          password (get-in request [:params :password])
-          token (jwt/sign {:user username} secret) ]
+          password (get-in request [:params :password])]
           
       (if (some? (db/get-user-by-username {:username username} ))
         {:status 400 :body {:error "A user with that username exists already"}}
         (do
-          (db/create-user! {:username username :password password})
-          (redirect-with-token token)))
-  ))
-
-  (GET "/token" request
-     ; gives a new token, assumes the user is authenticated? No.
-     ; if :identity in session (set by /login /create-user route manually
-     ; or has an old expired token (just renew the token in that case?)
-  )
+          (db/create-user! {:username (clojure.string/trim username) :password password})
+          (def user (db/get-user-by-username {:username username}))
+          (redirect-with-token (sign-jwt-token user))))))
 
   (POST "/login" request
         (let [username (get-in request [:params :username])
               password (get-in request [:params :password])
               get-password (db/get-user-password-by-username {:username username})
               found-password (and get-password (get-password :password))
-              token (jwt/sign {:user username} secret) ]
+              user (db/get-user-by-username {:username username})]
+
+          (println "found password " found-password)
+          (println "username " username)
 
            (if (and (some? found-password) (= password found-password))
-             (redirect-with-token token)
+             (redirect-with-token (sign-jwt-token user))
              {:status 401 :body {:desc "wrong password"}}
            )))
 
@@ -79,12 +93,18 @@
           (password-field {:placeholder "password"} "password")
           (submit-button "login"))
 
-       (form-to [:post "/create-user"]
+       (form-to [:post "/users"]
           [:h2 "Sign up"]
           (text-field {:placeholder "username"} "username")
           (password-field {:placeholder "password"} "password")
           (submit-button "signup")))
     ))
+
+  (GET "/token" request
+     ; gives a new token, assumes the user is authenticated? No.
+     ; if :identity in session (set by /login /create-user route manually
+     ; or has an old expired token (just renew the token in that case?)
+  )
 
   (route/not-found "Not Found"))
 
