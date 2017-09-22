@@ -1,5 +1,7 @@
 (ns api-test.core
-  (:require [reagent.core :as r]
+  (:require [api-test.events]
+    [api-test.subs]
+    [reagent.core :as r]
             [cljs.core.async :refer [<! >!]] 
             [cljs-http.client :as http-client]
             [re-frame.core :refer [subscribe dispatch]])
@@ -11,34 +13,43 @@
 
 (defn get-username []
   (go (let [response (<! (http-client/get "http://localhost:3000/data"))]
-    (reset! username (-> (:user (:data (:body response))) clojure.string/capitalize))
-  ))
-)
-
-(def chats (r/atom [{:id 1 :name "Dreamteam"} {:id 2 :name "Security Team  2"} {:id 3 :name "The Loser Club"}]))
-(def active-chat (r/atom 1)) ; switch to re-frame
+    (reset! username (-> (:user (:data (:body response))) clojure.string/capitalize)))))
 
 
 (defn chat-view [{:keys [id name] }] 
-  [:span {
-          :style {:cursor "pointer"} 
-          :on-click  #(reset! active-chat id)
-         } name ])
+  (let [active-chat @(subscribe [:active-chat])]
+    [:span {
+        :style {
+          :background (when (= id active-chat) "#6698c8")
+          :color (when (= id active-chat) "white")
+          :cursor "pointer"
+          :user-select "none" } 
+        :on-click  #(dispatch [:change-active-chat id])
+       } name ]))
 
-(def contacts (r/atom [{:id 1 :username "Gretchen" :is-online true} {:id 2 :username "Auntie Abdil" :is-online false}]))
 
-(defn user-view [{:keys [username is-online] } is-current-user]
-    [:span [:i {:class (if is-online "fa fa-circle" "fa fa-circle-o" )
-                :style {
-                 :color (when is-online "#1db91d")
-                 :font-size "small"
-                 :margin-right "0.4rem"
-                }}]  
-   username 
-   (when is-current-user " (you)")])
+(defn user-view [{:keys [username is-online chat-id] } is-current-user]
+  (let [active-chat @(subscribe [:active-chat])]
+    [:span {
+       :style {
+         :background (when (= chat-id active-chat) "#6698c8")
+         :color (when (= chat-id active-chat) "white")
+         :cursor "pointer"
+         :user-select "none" }
+       :on-click #(dispatch [:change-active-chat chat-id])
+      }
+      [:i {:class (if is-online "fa fa-circle" "fa fa-circle-o" )
+      :style {
+       :color (when is-online "#1db91d")
+       :font-size "small"
+       :margin-right "0.4rem"
+      }}]  
+
+     username 
+     (when is-current-user " (you)")]))
 
 (defn sidebar []
-  (get-username) ; instead of a component-did-mount
+  (get-username)
   (fn []
     [:div {:style { 
              :background "#303E4D"
@@ -54,8 +65,8 @@
                 :margin-left "1.5rem"
                       }}
           [:h2 "Direct Messages"]
-          [user-view {:username @username :is-online true} true]
-          (map user-view @contacts)]
+          [user-view {:id 3 :username @username :chat-id 6 :is-online true} true]
+          (map user-view @(subscribe [:contacts]))]
 
        [:div {:style {
                       :flex-direction "column"
@@ -72,21 +83,13 @@
                     :font-size "xx-large"  
                     :user-select "none"
                     :margin-left "0.3rem" }
-                  :on-click #(swap! chats conj "new chat")
+                  :on-click #(dispatch [:add-chat])
                  } "+"] 
          ]
        
-
-       [:div {:style {:display "flex" :flex-direction "column" }}
-        (map chat-view @chats)
-       ]]
+          (into [:idv {:style {:display "flex" :flex-direction "column" }}] (map chat-view @(subscribe [:chats])))
+          ]
      ]))
-
-(def messages (r/atom [{:chat-id 1 :value "a message" :user "Pontus" :timestamp "some time"} 
-                     {:chat-id 2 :value "a message" :user "Pontus" :timestamp "some time"}
-                     {:chat-id 3 :value "a message" :user "Pontus" :timestamp "some time"}
-                     {:chat-id 1 :value "another message" :user "Pontus" :timestamp "some time"}
-               ]))
 
 (defn message-view [{:keys [user timestamp value]} message]
     [:div {:style {:margin "0.5rem"}}
@@ -99,7 +102,7 @@
   (let [value (r/atom "")
         add-message #(if-not (-> % .-shiftKey)
                         (let [passed-value (-> % .-target .-value clojure.string/trim)]
-                          (swap! messages conj {:value passed-value :chat-id @active-chat :user @username :timestamp (.getTime (js/Date.))} )
+                          (dispatch [:add-message {:value  passed-value :chat-id @(subscribe [:active-chat]) :user @username :timestamp (.getTime (js/Date.))}])
                           (reset! value "")))]
     (fn []
       [:div {:style {
@@ -112,18 +115,20 @@
                  :border-bottom "1px solid #e3e3e3"
                  :padding "1rem"
                }}
-             "Meta data about the current chat; settings; searchbox." ]
 
-          [:div {:style {
-                 :color "gray"
-                 :height "100vh"
-                 :overflow-y "scroll"
-                 :margin "1rem" }}
+             [:span (or (:name (some #(when (= @(subscribe [:active-chat]) (:id %)) %) @(subscribe [:chats])))
+                        (:username (some #(when (= @(subscribe [:active-chat]) (:chat-id %)) %) @(subscribe [:contacts])))) ]]
 
-           (->> @messages 
-               (filter #(= (:chat-id %) @active-chat))
-               (map message-view))
-          ]
+          (into [:div 
+                   {:style {
+                     :color "gray"
+                     :height "100vh"
+                     :overflow-y "scroll"
+                     :margin "1rem" }}]
+
+                 (->> @(subscribe [:messages])
+                   (filter #(= (:chat-id %) @(subscribe [:active-chat])))
+                   (map message-view)))
 
           [:input {:style {
                      :padding "1rem"
@@ -140,9 +145,11 @@
 )
 
 (defn main []
-  [:div {:style {:display "flex" :height "100vh"}}
-    [sidebar]
-    [main-page]]
+  (dispatch [:init-db])
+  (fn []
+    [:div {:style {:display "flex" :height "100vh"}}
+      [sidebar]
+      [main-page]])
 )
 
 (defn mount-root []
