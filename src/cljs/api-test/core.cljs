@@ -9,7 +9,6 @@
 
 (defn chat-view [{:keys [id name] }] 
   (let [active-chat @(subscribe [:active-chat])]
-
     [:span {
         :style {
           :background (when (= id active-chat) "#6698c8")
@@ -23,17 +22,22 @@
 ; So I keep using the GET /contacts endpoint to the all the available contacts; then a user can initiate a chat which actually creates a chat with the user.
 ; then it's sent along with other chats in the GET /chats, but filtered on the client to appear under "Direct Messages."
 
-(defn user-view [{:keys [username is-online chat-id] } is-current-user]
-  (println "username " username)
-  (println "is-online " is-online)
-  (println "chat-id " chat-id)
-  (println "is-current-user " is-current-user)
+(defn user-view [{:keys [id username is-online chat-id] }]
+  (let [active-chat @(subscribe [:active-chat])
+        logged-in-user-id (:id @(subscribe [:logged-in-user]))
+        is-current-user (= id logged-in-user-id)
+        is-online (or is-current-user is-online)]
 
-  (let [active-chat @(subscribe [:active-chat])]
+    (println "username " username)
+    (println "is-online " is-online)
+    (println "chat-id " chat-id)
+    (println "id " id)
+    (println "active-chat " active-chat)
+
     [:span {
        :style {
-         :background (when (= chat-id active-chat) "#6698c8")
-         :color (when (= chat-id active-chat) "white")
+         :background (when (and active-chat (= chat-id active-chat)) "#6698c8")
+         :color (when (and active-chat (= chat-id active-chat)) "white")
          :cursor "pointer"
          :user-select "none" }
        :on-click #(dispatch [:change-active-chat chat-id])

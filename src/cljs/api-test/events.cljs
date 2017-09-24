@@ -90,7 +90,7 @@
   (fn [db [action response]]
     (let [username (:username (:data (:body response)))
           id (:id (:data (:body response)))]
-      (update-in db [:logged-in-user] conj {:id id :username (clojure.string/capitalize username)}))))
+      (assoc-in db [:logged-in-user] {:id id :username (clojure.string/capitalize username)}))))
 
 
 (reg-event-fx
