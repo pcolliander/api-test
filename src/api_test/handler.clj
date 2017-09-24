@@ -5,19 +5,16 @@
              [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
              [buddy.sign.jwt :as jwt]
              [clj-time.core :as clj-time]
-             (clj-time.jdbc)
              (clj-time [format :as timef] [coerce :as timec])
              [compojure.core :refer :all]
              [compojure.handler :as compojure-handler] 
              [compojure.route :as route]
-             [conman.core :as conman]
-             [selmer.parser :refer [render-file]]
              [hiccup.core :as hiccup]
+             [selmer.parser :refer [render-file]]
              [mount.core :as mount]
+             [ring.middleware.defaults :refer :all]
              [ring.middleware.json :as json-middleware]
              [ring.middleware.resource :refer :all]
-             [ring.middleware.defaults :refer :all]
-             [ring.middleware.session :refer [wrap-session]]
              [ring.util.response :refer :all]
   ))
 
@@ -34,29 +31,27 @@
 
 (defroutes app-routes
   (GET "/" request 
-     (if (authenticated? request) 
-       (render-file "templates/index.html" {})
-       (redirect "/login")))
+    (if (authenticated? request) 
+      (render-file "templates/index.html" {})
+      (redirect "/login")))
 
   (GET "/data" request
-     (if (authenticated? request)
-       {:status 200 :body {:data (get request :identity)}}
-       {:status 401 }))
+    (if (authenticated? request)
+      {:status 200 :body {:data (get request :identity)}}
+      {:status 401 }))
 
   (GET "/chats" request 
-
-       (let [user-id ((get request :identity) :id)
-             chats (db/get-chats {:user_id user-id})]
-         
-         {:status 200 :body {:chats chats}}))
+    (let [user-id ((get request :identity) :id)
+          chats (db/get-chats {:user_id user-id})]
+       
+    {:status 200 :body {:chats chats}}))
 
   (POST "/chats" request
     (let [{:keys [name is-private]} (:body request)
-          user-id ((get request :identity) :id)]
+          user-id ((get request :identity) :id)
+          chat-id (:id (db/add-chat! {:name name :is-private is-private}))]
 
-        (def chat-id (:id (db/add-chat! {:name name :is-private is-private})))
-        (db/add-chat-permission! {:chat_id chat-id :user_id user-id})
-
+      (db/add-chat-permission! {:chat_id chat-id :user_id user-id})
       {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}))
 
   (POST "/users" request
@@ -67,8 +62,8 @@
         {:status 400 :body {:error "A user with that username exists already"}}
         (do
           (db/create-user! {:username (clojure.string/trim username) :password password})
-          (def user (db/get-user-by-username {:username username}))
-          (redirect-with-token (sign-jwt-token user))))))
+          (let [user (db/get-user-by-username {:username username})]
+            (redirect-with-token (sign-jwt-token user)))))))
 
 
   (GET "/chats/:chat-id/messages" request
@@ -84,8 +79,7 @@
     (if (authenticated? request)
       (let [user-id (get-in request [:identity :id])
         contacts (db/get-contacts-by-chat-permissions {:user-id user-id})]
-        {:status 200 :body {:contacts contacts }})
-  ))
+        {:status 200 :body {:contacts contacts }})))
 
   (POST "/chats/:chat-id/messages" request
     (if (authenticated? request)
@@ -103,9 +97,6 @@
               get-password (db/get-user-password-by-username {:username username})
               found-password (and get-password (get-password :password))
               user (db/get-user-by-username {:username username})]
-
-          (println "found password " found-password)
-          (println "username " username)
 
            (if (and (some? found-password) (= password found-password))
              (redirect-with-token (sign-jwt-token user))
@@ -129,12 +120,6 @@
           (submit-button "signup")))
     ))
 
-  (GET "/token" request
-     ; gives a new token, assumes the user is authenticated? No.
-     ; if :identity in session (set by /login /create-user route manually
-     ; or has an old expired token (just renew the token in that case?)
-  )
-
   (route/not-found "Not Found"))
 
 ; this must check expiry timestamp of JWT token at some point.
@@ -143,10 +128,6 @@
     (if-let [token (get-in request [:cookies "token" :value])]
       (handler (assoc-in request [:headers "authorization"] (str "Token " token)))
       (handler request))))
-
-(defn no-op [handler]
-  (fn [request]
-    (handler request)))
 
 (defn my-unauthorized-handler [request metadata] {:status 403})
 
