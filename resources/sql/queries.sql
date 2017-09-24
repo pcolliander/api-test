@@ -12,16 +12,12 @@ INSERT INTO chats
 VALUES (:name, :is-private)
 RETURNING id
 
-
 -- :name get-messages-by-chat :? :*
 -- :doc gets all the messages by a given chat.
 SELECT messages.id, messages.chat_id, message, timestamp, username FROM messages
 INNER JOIN chats_permissions on messages.chat_id = chats_permissions.chat_id
 INNER JOIN users on messages.user_id = users.id
 WHERE messages.chat_id = :chat-id AND chats_permissions.user_id = :user-id
-
-
-
 
 -- :name get-contacts-by-chat-permissions :? :*
 -- :doc gets all the users also part of the same chats as the given user.
@@ -48,11 +44,6 @@ SELECT id, name, is_private FROM chats
 INNER JOIN chats_permissions ON chats.id = chats_permissions.chat_id
 WHERE user_id = :user_id
 
--- :name get-user :? :1
--- :doc retrieve a user given the id.
-SELECT * FROM users
-WHERE id = :id
-
 -- :name get-user-by-username :? :1
 -- :doc retrieve a user given the username.
 SELECT id, username FROM users
@@ -62,10 +53,4 @@ WHERE username = :username
 -- :doc retrieve a user password given the username.
 SELECT password FROM users
 WHERE username = :username
-
-
--- :name get-users :? :n
--- :doc retrieves all users
-SELECT * FROM users
-
 
