@@ -6,4 +6,3 @@ CREATE TABLE IF NOT EXISTS messages
   message VARCHAR (3000),
   timestamp TIMESTAMP WITH TIME ZONE
 );
-
