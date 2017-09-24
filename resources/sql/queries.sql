@@ -12,6 +12,20 @@ INSERT INTO chats
 VALUES (:name, :is-private)
 RETURNING id
 
+
+-- :name get-messages-by-chat :? :*
+-- :doc gets all the messages by a given chat.
+SELECT messages.id, messages.chat_id, message, timestamp, username FROM messages
+INNER JOIN chats_permissions on messages.chat_id = chats_permissions.chat_id
+INNER JOIN users on messages.user_id = users.id
+WHERE messages.chat_id = :chat-id AND chats_permissions.user_id = :user-id
+
+-- :name add-message! :! :n
+-- :doc adds a new message to the given chat-id.
+INSERT INTO messages
+(chat_id, user_id, message, timestamp)
+VALUES (:chat-id, :user-id, :message, :timestamp)
+
 -- :name add-chat-permission! :!
 -- :doc adds user permission for a user to the given chat.
 INSERT INTO chats_permissions

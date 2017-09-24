@@ -3,7 +3,7 @@
       [api-test.events]
       [api-test.subs]
       [reagent.core :as r]
-      [re-frame.core :refer [subscribe dispatch]]))
+      [re-frame.core :refer [subscribe dispatch dispatch-sync]]))
 
 (enable-console-print!)
 
@@ -13,8 +13,7 @@
     [:span {
         :style {
           :background (when (= id active-chat) "#6698c8")
-          :color (when (= id active-chat) "white")
-          :cursor "pointer"
+          :color (when (= id active-chat) "white") :cursor "pointer"
           :user-select "none" } 
         :on-click  #(dispatch [:change-active-chat id])
        } name ]))
@@ -84,18 +83,19 @@
        )
    )
 
-(defn message-view [{:keys [user timestamp value]} message]
-    [:div {:style {:margin "0.5rem"}}
-      [:span {:style {:color "#463636" :font-weight "bold" }} user] 
-      [:span {:style {:font-style "italic" }} " " timestamp]
-      [:span {:style {:display "block" :padding "0.1rem" }} value]
-    ])
+(defn message-view [{:keys [username timestamp message]}]
+  [:div {:style {:margin "0.5rem"}}
+    [:span {:style {:color "#463636" :font-weight "bold" }} username] 
+    [:span {:style {:font-style "italic" }} " " timestamp]
+    [:span {:style {:display "block" :padding "0.1rem" }} message]
+  ])
+    
 
 (defn main-page []
   (let [value (r/atom "")
         add-message #(if-not (-> % .-shiftKey)
                         (let [passed-value (-> % .-target .-value clojure.string/trim)]
-                          (dispatch [:add-message {:value  passed-value :chat-id @(subscribe [:active-chat]) :username (@(subscribe [:logged-in-user]) :username) :timestamp (.getTime (js/Date.))}])
+                          (dispatch [:add-message {:message  passed-value :chat-id @(subscribe [:active-chat])}])
                           (reset! value "")))]
     (fn []
       [:div {:style {
@@ -120,7 +120,7 @@
                      :margin "1rem" }}]
 
                  (->> @(subscribe [:messages])
-                   (filter #(= (:chat-id %) @(subscribe [:active-chat])))
+                   (filter #(= (:chat_id %) @(subscribe [:active-chat])))
                    (map message-view)))
 
           [:input {:style {
@@ -136,8 +136,8 @@
       )))
 
 (defn main []
-  (dispatch [:init-db])
-  (dispatch [:get-chats])
+  (dispatch-sync [:init-db])
+  (dispatch-sync [:get-chats]) 
   (dispatch [:get-user-meta-data])
   (fn []
     [:div {:style {:display "flex" :height "100vh"}}

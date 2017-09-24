@@ -19,6 +19,7 @@
                  [org.clojure/tools.nrepl "0.2.13"]
                  [com.cemerick/piggieback "0.2.2"]
                  [ring/ring-defaults "0.2.1"]
+                 [clj-time "0.14.0"]
 
                  ;; [com.fzakaria/slf4j-timbre "0.2"]
 
@@ -26,8 +27,7 @@
                  [org.clojure/clojurescript "1.9.908" :scope "provided"]
                  [org.webjars/font-awesome "4.6.3"]
                  [cljs-http "0.1.39"]
-                 ;; [cljs-ajax "0.7.2"]
-                 [com.andrewmcveigh/cljs-time "0.5.0"]
+                 [cljs-ajax "0.7.2"]
                  [reagent "0.7.0"]
                  [re-frame "0.9.4"]]
 

@@ -2,7 +2,7 @@
   (:require [api-test.db :refer [default-db]]
             ;; [ajax.core :refer [GET POST]]
             [cljs-http.client :as http-client]
-            [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path trim-v after debug]]
+            [re-frame.core :refer [reg-event-db reg-event-fx reg-fx inject-cofx path trim-v after debug]]
             [cljs.core.async :refer [<! >!]] 
             [re-frame.core :refer [subscribe dispatch]])
   (:require-macros [cljs.core.async.macros :refer [go]] ))
@@ -11,68 +11,100 @@
   :init-db
   (fn [_ _]
     {
-     :active-chat 1 
      :contacts [{:id 1 :chat-id 4 :username "Gretchen" :is-online true} {:id 2 :chat-id 5 :username "Auntie Abdil" :is-online false}]
-     :logged-in-user {:id nil :username ""} 
-     :messages [{:chat-id 1 :value "a message" :user "Pontus" :timestamp "some time"} 
-                {:chat-id 2 :value "a message" :user "Pontus" :timestamp "some time"}
-                {:chat-id 3 :value "a message" :user "Pontus" :timestamp "some time"}
-                {:chat-id 1 :value "another message" :user "Pontus" :timestamp "some time"}]}))
+     :logged-in-user {:id nil :username ""}} ))
 
-(reg-event-db
-  :add-message
-  (fn [db [action payload]]
-    (update-in db [:messages] conj payload)))
+; own effects handler
+; -------------------
+(reg-fx
+  :http-client-get
+  (fn [{:keys [url success-handler]}]
+    (go (let [response (<! (http-client/get url))]
+      (dispatch (conj success-handler response))
+    ))))
 
-(reg-event-db 
-  :insert-user-meta-data
-  (fn [db [action payload]]
-    (update-in db [:logged-in-user] conj payload ))) ;only username for now.
+(reg-fx
+  :http-client-post
+  (fn [{:keys [url params success-handler]}]
+    (go (let [response (<! (http-client/post url params))]
+      (dispatch (conj success-handler response))
+    ))))
 
-(reg-event-db
+
+
+; event handlers
+; -------------------
+
+(reg-event-fx
   :change-active-chat
-  (fn [db [action id]]
-    (assoc db :active-chat id)))
+  (fn [{db :db} [action id]]
+    {:dispatch [:get-messages id]
+     :db (assoc db :active-chat id)
+    }
+    ))
 
+(reg-event-fx
+  :get-messages
+  (fn [cofx [action chat-id]]
+    {:http-client-get {:url (str "http://localhost:3000/chats/"chat-id "/messages")
+                       :success-handler [:get-messages-success] }}
+    ))
 
-(reg-event-db 
-  :get-chats-success
-  (fn [db [action payload]]
-    (prn "payload " payload)
-      (update-in db [:chats] concat payload)))
+(reg-event-db
+  :get-messages-success
+  (fn [db [action response]]
+    (let [messages (:messages (:body response))
+          chat-id  (:chat-id (:body response)) ]
+    
+      ; Per messages I need: username (who posted it), chat-id (where it was posted), timestamp (when it was posted).
+      (update-in db [:messages] merge messages))))
 
 (reg-event-fx
   :get-chats
+  (fn [cofx action]
+    {:http-client-get {:url "http://localhost:3000/chats" 
+                       :success-handler [:get-chats-success]
+                       }}))
+(reg-event-db 
+  :get-chats-success
+  (fn [db [action response]]
+    (let [chats (:chats (:body response))]
+      (update-in db [:chats] concat chats))))
+
+(reg-event-db 
+  :insert-user-meta-data
+  (fn [db [action response]]
+    (let [username (:username (:data (:body response)))
+          id (:id (:data (:body response)))]
+      (update-in db [:logged-in-user] conj {:id id :username (clojure.string/capitalize username)}))))
+
+
+(reg-event-fx
+  :get-user-meta-data
   (fn [db [action]]
-    (go (let [response (<! (http-client/get "http://localhost:3000/chats"))
-              chats (:chats (:body response))]
-
-          (dispatch [:get-chats-success chats])
-  ))))
-
-
-(reg-event-db
-  :add-chat-success
-  (fn [db [action payload]]
-    
-    (update-in db [:chats] conj payload)
-  ))
+    {:http-client-get {:url "http://localhost:3000/data" 
+                       :success-handler [:insert-user-meta-data]
+                 }}))
 
 (reg-event-fx
   :add-chat
-  (fn [db [action name]]
-    (go (let [response (<! (http-client/post "http://localhost:3000/chats" {:json-params {:name name :is-private false}}))
-              chat-id (:chat-id (:body response))]
-      (dispatch [:add-chat-success {:id chat-id :name name :is-private false}])
-))))
+  (fn [cofx [action name]]
+    {:http-client-post {:url "http://localhost:3000/chats"
+                        :params {:json-params {:name name :is-private false}}
+                        :success-handler [:add-chat-success]
+                        }}))
+(reg-event-fx
+  :add-message
+  (fn [cofx [action {:keys [message chat-id]}]]
+    {:http-client-post {:url (str "http://localhost:3000/chats/"chat-id"/messages")
+                        :params {:json-params {:message message } }}}))
 
 (reg-event-db
-  :get-user-meta-data
-  (fn [db [action]]
-    (go (let [response (<! (http-client/get "http://localhost:3000/data"))
-              username (:username (:data (:body response)))
-              id (:id (:data (:body response)))]
+  :add-chat-success
+  (fn [db [action response]]
+    (let [chat (:chat (:body response))
+          {:keys [chat-id name is-private]} chat ]
+      (update-in db [:chats] conj {:id chat-id :name name :is-private is-private}))))
 
-      (update-in db [:logged-in-user] conj {:id id :username (clojure.string/capitalize username)})
-  ))))
+
 

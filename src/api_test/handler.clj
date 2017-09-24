@@ -4,6 +4,9 @@
              [buddy.auth :refer [authenticated? throw-unauthorized]]
              [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
              [buddy.sign.jwt :as jwt]
+             [clj-time.core :as clj-time]
+             (clj-time.jdbc)
+             (clj-time [format :as timef] [coerce :as timec])
              [compojure.core :refer :all]
              [compojure.handler :as compojure-handler] 
              [compojure.route :as route]
@@ -55,7 +58,7 @@
         (def chat-id (:id (db/add-chat! {:name name :is-private is-private})))
         (db/add-chat-permission! {:chat_id chat-id :user_id user-id})
 
-      {:status 201 :body {:chat-id chat-id}}))
+      {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}))
 
   (POST "/users" request
     (let [username (get-in request [:params :username])
@@ -67,6 +70,34 @@
           (db/create-user! {:username (clojure.string/trim username) :password password})
           (def user (db/get-user-by-username {:username username}))
           (redirect-with-token (sign-jwt-token user))))))
+
+
+  (GET "/chats/:chat-id/messages" request
+       (println "here" authenticated? request)
+       (println "here" request)
+
+    (if (authenticated? request)
+      (let [user-id (get-in request [:identity :id])
+           chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
+           messages (into {} (db/get-messages-by-chat {:chat-id chat-id :user-id user-id} ))]
+
+        (println "here too")
+
+        (println "messages: " (into {} messages))
+      {:status 200 :body {:chat-id chat-id :messages messages }}
+  )))
+
+
+  (POST "/chats/:chat-id/messages" request
+    (if (authenticated? request)
+      (let [message (get-in request [:body :message])
+            user-id (get-in request [:identity :id])
+            chat-id (Integer/parseInt (get-in request [:route-params :chat-id])) 
+            now (new java.util.Date)]
+
+        (println "now: " now)
+        (db/add-message! {:chat-id chat-id :user-id user-id :message message :timestamp (timec/to-timestamp (clj-time/now)) })
+        {:status 201 })))
 
   (POST "/login" request
         (let [username (get-in request [:params :username])
