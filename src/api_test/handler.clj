@@ -22,7 +22,6 @@
   ))
 
 (use 'hiccup.form)
-;; (set! *warn-on-reflection* true)
 (def secret "mysecret")
 
 (mount/start)
@@ -73,31 +72,30 @@
 
 
   (GET "/chats/:chat-id/messages" request
-       (println "here" authenticated? request)
-       (println "here" request)
-
     (if (authenticated? request)
       (let [user-id (get-in request [:identity :id])
            chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
-           messages (into {} (db/get-messages-by-chat {:chat-id chat-id :user-id user-id} ))]
+           messages (into [] (db/get-messages-by-chat {:chat-id chat-id :user-id user-id} ))]
 
-        (println "here too")
-
-        (println "messages: " (into {} messages))
       {:status 200 :body {:chat-id chat-id :messages messages }}
   )))
 
+  (GET "/contacts" request
+    (if (authenticated? request)
+      (let [user-id (get-in request [:identity :id])
+        contacts (db/get-contacts-by-chat-permissions {:user-id user-id})]
+        {:status 200 :body {:contacts contacts }})
+  ))
 
   (POST "/chats/:chat-id/messages" request
     (if (authenticated? request)
       (let [message (get-in request [:body :message])
             user-id (get-in request [:identity :id])
-            chat-id (Integer/parseInt (get-in request [:route-params :chat-id])) 
-            now (new java.util.Date)]
+            chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
+            timestamp (timec/to-timestamp (clj-time/now))
+            id (:id (db/add-message! {:chat-id chat-id :user-id user-id :message message :timestamp timestamp})) ]
 
-        (println "now: " now)
-        (db/add-message! {:chat-id chat-id :user-id user-id :message message :timestamp (timec/to-timestamp (clj-time/now)) })
-        {:status 201 })))
+        {:status 201 :body {:message {:id id :message message :chat-id chat-id :username (get-in request [:identity :username]) :timestamp timestamp } }})))
 
   (POST "/login" request
         (let [username (get-in request [:params :username])

@@ -22,6 +22,16 @@
     (:messages db)))
 
 (reg-sub
+  :messages-by-chat
+  (fn [_ _]
+    [(subscribe [:active-chat])
+     (subscribe [:messages])])
+
+  (fn [[active-chat messages] _]
+      (get messages active-chat)))
+
+
+(reg-sub
   :logged-in-user
   (fn [db]
     (:logged-in-user db)))

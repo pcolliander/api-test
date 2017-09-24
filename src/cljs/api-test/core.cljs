@@ -18,7 +18,17 @@
         :on-click  #(dispatch [:change-active-chat id])
        } name ]))
 
+; How should I treat a direct-message chat? I think it should be a chat just like any other (so it can share logic) but perhaps separated/identified by an attribute (in the db, sent to the client).
+; Maybe it should be initiated on the client as a user-action, and then sent to the server as a new "chat." 
+; So I keep using the GET /contacts endpoint to the all the available contacts; then a user can initiate a chat which actually creates a chat with the user.
+; then it's sent along with other chats in the GET /chats, but filtered on the client to appear under "Direct Messages."
+
 (defn user-view [{:keys [username is-online chat-id] } is-current-user]
+  (println "username " username)
+  (println "is-online " is-online)
+  (println "chat-id " chat-id)
+  (println "is-current-user " is-current-user)
+
   (let [active-chat @(subscribe [:active-chat])]
     [:span {
        :style {
@@ -76,7 +86,7 @@
                     :margin-left "0.3rem" }
                   :on-click #(dispatch [:add-chat @value])
                  } "+"] 
-           [:input {:placeholder "chat name" :on-change #(reset! value (-> % .-target .-value ))}] 
+           [:input {:style {:margin-left "0.5rem"} :placeholder "chat name" :on-change #(reset! value (-> % .-target .-value ))}] 
          ]
           (into [:idv {:style {:display "flex" :flex-direction "column" }}] (map chat-view @(subscribe [:chats])))
           ]]
@@ -119,8 +129,7 @@
                      :overflow-y "scroll"
                      :margin "1rem" }}]
 
-                 (->> @(subscribe [:messages])
-                   (filter #(= (:chat_id %) @(subscribe [:active-chat])))
+                 (->> @(subscribe [:messages-by-chat])
                    (map message-view)))
 
           [:input {:style {
@@ -138,6 +147,7 @@
 (defn main []
   (dispatch-sync [:init-db])
   (dispatch-sync [:get-chats]) 
+  (dispatch-sync [:get-contacts]) 
   (dispatch [:get-user-meta-data])
   (fn []
     [:div {:style {:display "flex" :height "100vh"}}

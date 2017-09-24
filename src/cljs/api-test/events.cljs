@@ -11,8 +11,12 @@
   :init-db
   (fn [_ _]
     {
-     :contacts [{:id 1 :chat-id 4 :username "Gretchen" :is-online true} {:id 2 :chat-id 5 :username "Auntie Abdil" :is-online false}]
-     :logged-in-user {:id nil :username ""}} ))
+      :contacts [{:id 1 :chat-id 4 :username "Gretchen" :is-online true} {:id 2 :chat-id 5 :username "Auntie Abdil" :is-online false}]
+      :logged-in-user {:id nil :username ""}} 
+      :messages []
+      :active-chat nil
+    
+    ))
 
 ; own effects handler
 ; -------------------
@@ -30,8 +34,6 @@
       (dispatch (conj success-handler response))
     ))))
 
-
-
 ; event handlers
 ; -------------------
 
@@ -39,14 +41,13 @@
   :change-active-chat
   (fn [{db :db} [action id]]
     {:dispatch [:get-messages id]
-     :db (assoc db :active-chat id)
-    }
+     :db (assoc db :active-chat id) }
     ))
 
 (reg-event-fx
   :get-messages
   (fn [cofx [action chat-id]]
-    {:http-client-get {:url (str "http://localhost:3000/chats/"chat-id "/messages")
+    {:http-client-get {:url (str "http://localhost:3000/chats/" chat-id "/messages")
                        :success-handler [:get-messages-success] }}
     ))
 
@@ -55,9 +56,7 @@
   (fn [db [action response]]
     (let [messages (:messages (:body response))
           chat-id  (:chat-id (:body response)) ]
-    
-      ; Per messages I need: username (who posted it), chat-id (where it was posted), timestamp (when it was posted).
-      (update-in db [:messages] merge messages))))
+      (assoc-in db [:messages chat-id] messages))))
 
 (reg-event-fx
   :get-chats
@@ -65,6 +64,21 @@
     {:http-client-get {:url "http://localhost:3000/chats" 
                        :success-handler [:get-chats-success]
                        }}))
+
+(reg-event-fx
+  :get-contacts
+  (fn [cofx action]
+    {:http-client-get {:url "http://localhost:3000/contacts" 
+                       :success-handler [:get-contacts-success]
+                       }}))
+
+(reg-event-db 
+  :get-contacts-success
+  (fn [db [action response]]
+    (let [contacts (:contacts (:body response))]
+      (update-in db [:contacts] concat contacts))))
+
+
 (reg-event-db 
   :get-chats-success
   (fn [db [action response]]
@@ -93,12 +107,6 @@
                         :params {:json-params {:name name :is-private false}}
                         :success-handler [:add-chat-success]
                         }}))
-(reg-event-fx
-  :add-message
-  (fn [cofx [action {:keys [message chat-id]}]]
-    {:http-client-post {:url (str "http://localhost:3000/chats/"chat-id"/messages")
-                        :params {:json-params {:message message } }}}))
-
 (reg-event-db
   :add-chat-success
   (fn [db [action response]]
@@ -106,5 +114,20 @@
           {:keys [chat-id name is-private]} chat ]
       (update-in db [:chats] conj {:id chat-id :name name :is-private is-private}))))
 
+(reg-event-fx
+  :add-message
+  (fn [cofx [action {:keys [message chat-id]}]]
+    {:http-client-post {:url (str "http://localhost:3000/chats/"chat-id"/messages")
+                        :params {:json-params {:message message }} 
+                        :success-handler [:add-message-success] }
+     
+     }))
 
+(reg-event-db
+  :add-message-success
+  (fn [db [action response]]
+    (let [message (:message (:body response))
+         {:keys [chat-id]} message]
+      (update-in db [:messages chat-id] conj message)
+   )))
 

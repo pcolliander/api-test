@@ -20,11 +20,21 @@ INNER JOIN chats_permissions on messages.chat_id = chats_permissions.chat_id
 INNER JOIN users on messages.user_id = users.id
 WHERE messages.chat_id = :chat-id AND chats_permissions.user_id = :user-id
 
--- :name add-message! :! :n
+
+
+
+-- :name get-contacts-by-chat-permissions :? :*
+-- :doc gets all the users also part of the same chats as the given user.
+SELECT id, username FROM users 
+  WHERE users.id in (select user_id FROM chats_permissions 
+    WHERE chat_id in (select id FROM chats INNER JOIN chats_permissions ON chats.id = chats_permissions.chat_id WHERE chats_permissions.user_id = :user-id))
+
+-- :name add-message! :<! :n
 -- :doc adds a new message to the given chat-id.
 INSERT INTO messages
 (chat_id, user_id, message, timestamp)
 VALUES (:chat-id, :user-id, :message, :timestamp)
+RETURNING id
 
 -- :name add-chat-permission! :!
 -- :doc adds user permission for a user to the given chat.
