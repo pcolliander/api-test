@@ -27,7 +27,7 @@
   (assoc (redirect "/") :cookies {"token" {:value token :http-only true}})) ; make ":secure true" when I've got SSL.
 
 (defn sign-jwt-token [{:keys [id username]}]
-  (jwt/sign {:id id :username username } secret))
+  (jwt/sign {:id id :username username} secret))
 
 (defroutes app-routes
   (GET "/" request 
@@ -41,65 +41,105 @@
       {:status 401 }))
 
   (GET "/chats" request 
-    (let [user-id ((get request :identity) :id)
-          chats (db/get-chats {:user_id user-id})]
-       
-    {:status 200 :body {:chats chats}}))
+    (let [person-id ((get request :identity) :id)
+          chats (db/get-chats {:person-id person-id})
+          contact-chats (filter #(not= (:person_id %) person-id) (db/get-contact-chats {:person-id person-id}))
+          self-chat (db/get-self-chat {:person-id person-id}) 
+          all-contact-chats (conj contact-chats self-chat) 
+          any-contact-chats?  (< 0 (count (filter some? all-contact-chats))) ]
+
+      {:status 200 :body {:chats chats :contact-chats (if any-contact-chats? all-contact-chats [])  }}))
 
   (POST "/chats" request
     (let [{:keys [name is-private]} (:body request)
-          user-id ((get request :identity) :id)
-          chat-id (:id (db/add-chat! {:name name :is-private is-private}))]
+          person-id ((get request :identity) :id)
+          chat-id (:id (db/add-chat! {:name name :is-private is-private :is-self-chat false}))]
 
-      (db/add-chat-permission! {:chat_id chat-id :user_id user-id})
+      (db/add-chat-permission! {:chat_id chat-id :person_id person-id})
+
       {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}))
+
+  (POST "/people/:contact-id/chats" request
+        (let [person-id ((get request :identity) :id)
+              contact-id (Integer/parseInt (get-in request [:route-params :contact-id]))
+              is-self-chat (= person-id contact-id)]
+
+          (println "contact-id " contact-id)
+          (println "is-self-chat " is-self-chat)
+          (println "person-id " person-id)
+
+          (if is-self-chat 
+            (let [self-chat-exists? (db/self-chat-exists? {:person-id person-id})]
+              (if (some? self-chat-exists?)
+                  {:status 400 }
+                (do 
+                  (let [chat-id (:id (db/add-chat! {:organisation-id 1 :name "" :is-private true :is-self-chat is-self-chat :is-direct-message true :is-group-direct-message false}))
+                        username ((get request :identity) :username) ]
+
+                    (db/add-chat-permission! {:chat-id chat-id :person-id person-id}) 
+                    {:status 201 :body {:chat {:chat_id chat-id :is_self_chat is-self-chat :person_id person-id :username username  }}}))))
+
+            (let [contact-chat-exists? (db/contact-chat-exists? {:person-id person-id :contact-id contact-id})]
+              (if (some? contact-chat-exists?)
+                {:status 400 }
+
+                (let [chat-id (:id (db/add-chat! {:organisation-id 1 :name "" :is-private true :is-self-chat is-self-chat :is-direct-message true :is-group-direct-message false}))
+                      contact-username (:username (db/get-person-by-id {:person-id contact-id}))]
+
+                  (db/add-chat-permission! {:chat-id chat-id :person-id person-id})
+                  (db/add-chat-permission! {:chat-id chat-id :person-id contact-id})
+                  
+
+                  {:status 201 :body {:chat {:chat_id chat-id :username contact-username :person_id contact-id :is_self_chat is-self-chat }} }))))))
 
   (POST "/users" request
     (let [username (get-in request [:params :username])
           password (get-in request [:params :password])]
           
-      (if (some? (db/get-user-by-username {:username username} ))
+      (if (some? (db/get-person-by-username {:username username} ))
         {:status 400 :body {:error "A user with that username exists already"}}
         (do
-          (db/create-user! {:username (clojure.string/trim username) :password password})
-          (let [user (db/get-user-by-username {:username username})]
+          (let [user (db/add-person! {:username (clojure.string/trim username) :password password})]
+            (db/add-person-to-organisation! {:organisation-id 1 :person-id (:id user)})
             (redirect-with-token (sign-jwt-token user)))))))
 
 
   (GET "/chats/:chat-id/messages" request
     (if (authenticated? request)
-      (let [user-id (get-in request [:identity :id])
+      (let [person-id (get-in request [:identity :id])
            chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
-           messages (into [] (db/get-messages-by-chat {:chat-id chat-id :user-id user-id} ))]
+           messages (into [] (db/get-messages-by-chat {:chat-id chat-id :person-id person-id} ))]
 
-      {:status 200 :body {:chat-id chat-id :messages messages }}
-  )))
+      {:status 200 :body {:chat-id chat-id :messages messages }})))
 
   (GET "/contacts" request
     (if (authenticated? request)
-      (let [user-id (get-in request [:identity :id])
-        contacts (db/get-contacts-by-chat-permissions {:user-id user-id})]
+      (let [person-id (get-in request [:identity :id])
+        contacts (db/get-contacts-by-organisation {:organisation-id 1})]  ; hard-code "1" as org for now.
+
         {:status 200 :body {:contacts contacts }})))
 
   (POST "/chats/:chat-id/messages" request
     (if (authenticated? request)
       (let [message (get-in request [:body :message])
-            user-id (get-in request [:identity :id])
+            person-id (get-in request [:identity :id])
             chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
             timestamp (timec/to-timestamp (clj-time/now))
-            id (:id (db/add-message! {:chat-id chat-id :user-id user-id :message message :timestamp timestamp})) ]
+
+            id (:id (db/add-message! {:chat-id chat-id :person-id person-id :message message :timestamp timestamp})) ] ; need to validate that the user actually has access to this chat.
+
 
         {:status 201 :body {:message {:id id :message message :chat-id chat-id :username (get-in request [:identity :username]) :timestamp timestamp } }})))
 
   (POST "/login" request
         (let [username (get-in request [:params :username])
               password (get-in request [:params :password])
-              get-password (db/get-user-password-by-username {:username username})
+              get-password (db/get-person-password-by-username {:username username})
               found-password (and get-password (get-password :password))
-              user (db/get-user-by-username {:username username})]
+              person (db/get-person-by-username {:username username})]
 
            (if (and (some? found-password) (= password found-password))
-             (redirect-with-token (sign-jwt-token user))
+             (redirect-with-token (sign-jwt-token person))
              {:status 401 :body {:desc "wrong password"}}
            )))
 
@@ -134,8 +174,15 @@
 (def jwt-token-backend (backends/jws 
   {:secret secret :unauthorized-handler my-unauthorized-handler}))
 
+; debug
+(defn print-identity-in-request [handler]
+  (fn [request]
+    (println "identity: " (get request :identity))
+    (handler request)))
+
 (def app
   (-> app-routes
+    (print-identity-in-request) ; debugging only.
     (wrap-authentication jwt-token-backend)
     (wrap-authorization jwt-token-backend)
     (set-authorisation-header-from-cookie)

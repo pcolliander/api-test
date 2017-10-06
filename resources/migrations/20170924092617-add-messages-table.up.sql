@@ -1,8 +1,8 @@
-CREATE TABLE IF NOT EXISTS messages
+CREATE TABLE IF NOT EXISTS message
 (
   id serial PRIMARY KEY,
-  chat_id serial REFERENCES chats(id),
-  user_id serial REFERENCES users(id),
+  chat_id serial REFERENCES chat(id),
+  person_id serial REFERENCES person(id),
   message VARCHAR (3000),
   timestamp TIMESTAMP WITH TIME ZONE
 );

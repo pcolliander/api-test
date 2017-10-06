@@ -9,12 +9,19 @@
 (reg-sub
   :chats
   (fn [db]
-    (sort-by :id (:chats db))))
+    (->> (:chats (:all-chats db))
+      (sort-by :id ))))
 
 (reg-sub
   :contacts
   (fn [db]
     (:contacts db)))
+
+
+(reg-sub 
+  :contact-chats
+  (fn [db]
+    (:contact-chats (:all-chats db))))
 
 (reg-sub
   :messages

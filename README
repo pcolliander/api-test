@@ -1,0 +1,9 @@
+
+; example how to create a migration file (up/down files).
+lein migratus create add-users-table
+
+; migrate
+lein migratus migrate
+
+; rollback
+lein migrate rollback

@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS organisation
+(
+  id SERIAL PRIMARY KEY,
+  name VARCHAR (200)
+);

@@ -1,1 +1,1 @@
-DROP TABLE chats_permissions;
+DROP TABLE chat_permission;

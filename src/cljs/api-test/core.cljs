@@ -17,22 +17,20 @@
         :on-click  #(dispatch [:change-active-chat id])
        } name ]))
 
-; How should I treat a direct-message chat? I think it should be a chat just like any other (so it can share logic) but perhaps separated/identified by an attribute (in the db, sent to the client).
-; Maybe it should be initiated on the client as a user-action, and then sent to the server as a new "chat." 
-; So I keep using the GET /contacts endpoint to the all the available contacts; then a user can initiate a chat which actually creates a chat with the user.
-; then it's sent along with other chats in the GET /chats, but filtered on the client to appear under "Direct Messages."
-
-(defn user-view [{:keys [id username is-online chat-id] }]
+(defn user-view [id username is-online chat-id]
   (let [active-chat @(subscribe [:active-chat])
         logged-in-user-id (:id @(subscribe [:logged-in-user]))
         is-current-user (= id logged-in-user-id)
-        is-online (or is-current-user is-online)]
+        is-online (or is-current-user is-online)
+        contact-has-chat (some #(when (= id (:person_id %)) %) @(subscribe [:contact-chats]))]
 
-    (println "username " username)
-    (println "is-online " is-online)
-    (println "chat-id " chat-id)
-    (println "id " id)
-    (println "active-chat " active-chat)
+    ;; (println)
+    ;; (println "username " username)
+    ;; (println "is-online " is-online)
+    ;; (println "chat-id " chat-id)
+    ;; (println "id " id)
+    ;; (println "active-chat " active-chat)
+    ;; (println)
 
     [:span {
        :style {
@@ -40,7 +38,11 @@
          :color (when (and active-chat (= chat-id active-chat)) "white")
          :cursor "pointer"
          :user-select "none" }
-       :on-click #(dispatch [:change-active-chat chat-id])
+       :on-click #(if (some? chat-id)
+                    (dispatch [:change-active-chat chat-id])
+                    (if (some? contact-has-chat) 
+                      (dispatch [:change-active-chat (:chat_id contact-has-chat)]) 
+                      (dispatch [:add-chat-with-contact id])))
       }
       [:i {:class (if is-online "fa fa-circle" "fa fa-circle-o" )
       :style {
@@ -49,29 +51,37 @@
        :margin-right "0.4rem"
       }}]  
 
-     username 
+     (or username "user-chat")
      (when is-current-user " (you)")]))
+  
 
 (defn sidebar []
   (let [value (r/atom "")]
+
     [:div {:style { 
              :background "#303E4D"
              :color "#c1c5ca"
              :display "flex"
              :flex-direction "column"
              :justify-content "space-evenly"
-             :width "18%" } } 
+             :width "18%" }} 
+
+     [:div {:style {
+              :display "flex"
+              :flex-direction "column"
+              :margin-left "1.5rem" }} 
+
+       [:h2 "Contact List"]
+       (for [contact @(subscribe [:contacts])]
+         [user-view (:id contact) (:username contact) (:is-online contact)])]
 
        [:div {:style {
                 :display "flex"
                 :flex-direction "column"
-                :margin-left "1.5rem"
-                      }}
-          [:h2 "Direct Messages"]
-
-          ;; [user-view {:id 3 :username (@(subscribe [:logged-in-user]) :username) :chat-id 6 :is-online true} true]
-          ; the logged-in user should just be treated as a normal user, then I can render them all below. Compare the ids to know it's the logged in user.
-          (map user-view @(subscribe [:contacts]))]
+                :margin-left "1.5rem" }}
+         [:h2 "Direct Messages"]
+           (for [contact @(subscribe [:contact-chats] )]
+             [user-view (:user_id contact) (:username contact) false (:chat_id contact)])]
 
        [:div {:style {
                       :flex-direction "column"
@@ -99,7 +109,7 @@
 
 (defn message-view [{:keys [username timestamp message]}]
   [:div {:style {:margin "0.5rem"}}
-    [:span {:style {:color "#463636" :font-weight "bold" }} username] 
+    [:span {:style {:color "#463636" :font-weight "bold" }} (-> username clojure.string/capitalize)] 
     [:span {:style {:font-style "italic" }} " " timestamp]
     [:span {:style {:display "block" :padding "0.1rem" }} message]
   ])
@@ -141,15 +151,13 @@
                      :width "100%" }
                    :on-change #(reset! value (-> % .-target .-value))
                    :on-key-down #(case (.-which %) 
-                                   13 (add-message %)
+                                   13  (add-message %)
                                    nil)
                    :placeholder "Write your message here." 
-                   :value @value
-                   } ]]
+                   :value @value }]]
       )))
 
 (defn main []
-  (dispatch-sync [:init-db])
   (dispatch-sync [:get-chats]) 
   (dispatch-sync [:get-contacts]) 
   (dispatch [:get-user-meta-data])

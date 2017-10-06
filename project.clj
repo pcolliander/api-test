@@ -6,6 +6,7 @@
   :dependencies [
                  ; server-side
                  [org.clojure/clojure "1.8.0"]
+                 [org.clojure/clojure "1.9.0-alpha16"] ; spec
                  [buddy/buddy-auth "2.0.0"]
                  [compojure "1.5.1"]
                  [cprop "0.1.9"]
@@ -79,6 +80,7 @@
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring/ring-mock "0.3.0"]
                         [re-frisk "0.5.0"]
+                        [org.clojure/test.check "0.9.0"]
                         ]}
 
    :uberjar { :prep-tasks ["compile" ["cljsbuild" "once" "min"]]}

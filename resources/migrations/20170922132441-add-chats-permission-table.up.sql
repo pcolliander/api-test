@@ -1,5 +1,5 @@
-CREATE TABLE IF NOT EXISTS chats_permissions
+CREATE TABLE IF NOT EXISTS chat_permission
 (
-  chat_id serial REFERENCES chats(id),
-  user_id serial REFERENCES users(id)
+  chat_id SERIAL REFERENCES chat(id),
+  person_id SERIAL REFERENCES person(id)
 );
