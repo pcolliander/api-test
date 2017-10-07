@@ -6,13 +6,13 @@
 (s/def ::username string?)
 (s/def ::logged-in-user (s/keys :req-un [::id ::username]))
 
-(s/def ::is_private boolean?)
-(s/def ::chat (s/keys :req-un [::id ::username ::is_private]))
+(s/def ::is-private boolean?)
+(s/def ::chat (s/keys :req-un [::id ::username ::is-private]))
 
-(s/def ::chat_id (s/and int? #(> % 0)))
-(s/def ::person_id (s/and int? #(> % 0)))
-(s/def ::is_self_chat boolean?)
-(s/def ::contact-chat (s/keys :req-un [::chat_id ::person_id ::is_self_chat]))
+(s/def ::chat-id (s/and int? #(> % 0)))
+(s/def ::person-id (s/and int? #(> % 0)))
+(s/def ::is-self-chat boolean?)
+(s/def ::contact-chat (s/keys :req-un [::chat-id ::person-id ::is-self-chat]))
 
 (s/def ::all-chats (s/keys :req-un [::contact-chats ::chats]))
 (s/def ::active-chat (s/and int? #(> % 0)))

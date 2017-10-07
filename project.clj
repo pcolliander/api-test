@@ -21,6 +21,7 @@
                  [com.cemerick/piggieback "0.2.2"]
                  [ring/ring-defaults "0.2.1"]
                  [clj-time "0.14.0"]
+                 [camel-snake-kebab "0.4.0"]
 
                  ;; [com.fzakaria/slf4j-timbre "0.2"]
 

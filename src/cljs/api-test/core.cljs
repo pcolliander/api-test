@@ -22,7 +22,7 @@
         logged-in-user-id (:id @(subscribe [:logged-in-user]))
         is-current-user (= id logged-in-user-id)
         is-online (or is-current-user is-online)
-        contact-has-chat (some #(when (= id (:person_id %)) %) @(subscribe [:contact-chats]))]
+        contact-has-chat (some #(when (= id (:person-id %)) %) @(subscribe [:contact-chats]))]
 
     ;; (println)
     ;; (println "username " username)
@@ -41,7 +41,7 @@
        :on-click #(if (some? chat-id)
                     (dispatch [:change-active-chat chat-id])
                     (if (some? contact-has-chat) 
-                      (dispatch [:change-active-chat (:chat_id contact-has-chat)]) 
+                      (dispatch [:change-active-chat (:chat-id contact-has-chat)]) 
                       (dispatch [:add-chat-with-contact id])))
       }
       [:i {:class (if is-online "fa fa-circle" "fa fa-circle-o" )
@@ -81,7 +81,7 @@
                 :margin-left "1.5rem" }}
          [:h2 "Direct Messages"]
            (for [contact @(subscribe [:contact-chats] )]
-             [user-view (:user_id contact) (:username contact) false (:chat_id contact)])]
+             [user-view (:user-id contact) (:username contact) false (:chat-id contact)])]
 
        [:div {:style {
                       :flex-direction "column"

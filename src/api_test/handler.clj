@@ -43,7 +43,7 @@
   (GET "/chats" request 
     (let [person-id ((get request :identity) :id)
           chats (db/get-chats {:person-id person-id})
-          contact-chats (filter #(not= (:person_id %) person-id) (db/get-contact-chats {:person-id person-id}))
+          contact-chats (filter #(not= (:person-id %) person-id) (db/get-contact-chats {:person-id person-id}))
           self-chat (db/get-self-chat {:person-id person-id}) 
           all-contact-chats (conj contact-chats self-chat) 
           any-contact-chats?  (< 0 (count (filter some? all-contact-chats))) ]
@@ -55,7 +55,7 @@
           person-id ((get request :identity) :id)
           chat-id (:id (db/add-chat! {:name name :is-private is-private :is-self-chat false}))]
 
-      (db/add-chat-permission! {:chat_id chat-id :person_id person-id})
+      (db/add-chat-permission! {:chat-id chat-id :person-id person-id})
 
       {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}))
 
@@ -77,7 +77,7 @@
                         username ((get request :identity) :username) ]
 
                     (db/add-chat-permission! {:chat-id chat-id :person-id person-id}) 
-                    {:status 201 :body {:chat {:chat_id chat-id :is_self_chat is-self-chat :person_id person-id :username username  }}}))))
+                    {:status 201 :body {:chat {:chat-id chat-id :is-self-chat is-self-chat :person-id person-id :username username  }}}))))
 
             (let [contact-chat-exists? (db/contact-chat-exists? {:person-id person-id :contact-id contact-id})]
               (if (some? contact-chat-exists?)
@@ -90,7 +90,7 @@
                   (db/add-chat-permission! {:chat-id chat-id :person-id contact-id})
                   
 
-                  {:status 201 :body {:chat {:chat_id chat-id :username contact-username :person_id contact-id :is_self_chat is-self-chat }} }))))))
+                  {:status 201 :body {:chat {:chat-id chat-id :username contact-username :person-id contact-id :is-self-chat is-self-chat }} }))))))
 
   (POST "/users" request
     (let [username (get-in request [:params :username])

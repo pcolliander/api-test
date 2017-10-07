@@ -10,13 +10,10 @@
 (defn check-and-throw
     "Throws an exception if `db` doesn't match the Spec `a-spec`."
       [a-spec db]
-      (println "s/valid? " (s/explain-str a-spec db))
         (when-not (s/valid? a-spec db)
               (throw (ex-info (str "spec check failed: " (s/explain-str a-spec db)) {}))))
 
 (def check-spec-interceptor (after (partial check-and-throw :api-test.db/db)))
-;; (def check-spec-interceptor (after (prn str :api-test.db/db)))
-
 (def chat-interceptors [check-spec-interceptor])
 
 ; own effects handler
@@ -44,8 +41,7 @@
   (fn [cofx [action id]]
     {:http-client-post {:url (str "http://localhost:3000/people/"id"/chats")
                         :params {:json-params {:contact-user-id id}}
-                        :success-handler [:add-chat-with-contact-success]}
-     }))
+                        :success-handler [:add-chat-with-contact-success]} }))
 
 (reg-event-db 
   :add-chat-with-contact-success
@@ -58,15 +54,13 @@
   chat-interceptors
   (fn [{db :db} [action id]]
     {:dispatch [:get-messages id]
-     :db (assoc db :active-chat id) }
-    ))
+     :db (assoc db :active-chat id) }))
 
 (reg-event-fx
   :get-messages
   (fn [cofx [action chat-id]]
     {:http-client-get {:url (str "http://localhost:3000/chats/" chat-id "/messages")
-                       :success-handler [:get-messages-success] }}
-    ))
+                       :success-handler [:get-messages-success] }}))
 
 (reg-event-db
   :get-messages-success
@@ -83,8 +77,7 @@
   chat-interceptors
   (fn [cofx action]
     {:http-client-get {:url "http://localhost:3000/chats" 
-                       :success-handler [:get-chats-success]
-                       }}))
+                       :success-handler [:get-chats-success] }}))
 
 (reg-event-db 
   :get-chats-success
@@ -92,7 +85,6 @@
   (fn [db [action response]]
     (let [chats (:chats (:body response))
           contact-chats (:contact-chats (:body response))]
-
       (assoc db :all-chats {:contact-chats contact-chats :chats chats} ))))
 
 ; ----------
@@ -100,8 +92,7 @@
   :get-contacts
   (fn [cofx action]
     {:http-client-get {:url "http://localhost:3000/contacts" 
-                       :success-handler [:get-contacts-success]
-                       }}))
+                       :success-handler [:get-contacts-success] }}))
 
 (reg-event-db 
   :get-contacts-success
@@ -124,8 +115,7 @@
   :get-user-meta-data
   (fn [db [action]]
     {:http-client-get {:url "http://localhost:3000/data" 
-                       :success-handler [:insert-user-meta-data]
-                 }}))
+                       :success-handler [:insert-user-meta-data] }}))
 
 ; ----------
 (reg-event-fx
@@ -145,14 +135,12 @@
       (update-in db [:chats] conj {:id chat-id :name name :is-private is-private}))))
 
 ; ----------
-
 (reg-event-fx
   :add-message
   (fn [cofx [action {:keys [message chat-id]}]]
     {:http-client-post {:url (str "http://localhost:3000/chats/"chat-id"/messages")
                         :params {:json-params {:message message }} 
-                        :success-handler [:add-message-success]}
-     }))
+                        :success-handler [:add-message-success]} }))
 
 (reg-event-db
   :add-message-success
@@ -160,8 +148,5 @@
   (fn [db [action response]]
     (let [message (:message (:body response))
          {:keys [chat-id]} message]
-      (update-in db [:messages chat-id] conj message)
-   )))
-
-; ----------
+      (update-in db [:messages chat-id] conj message))))
 
