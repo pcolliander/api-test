@@ -1,11 +1,6 @@
 (ns api-test.config                             
-  (:require [cprop.core :refer [load-config]]
-            [cprop.source :as source]
+  (:require [environ.core :refer [env]] 
             [mount.core :refer [args defstate]]))
 
-(defstate env :start (load-config
-                       :merge
-                       [(args)
-                        (source/from-system-props)
-                        (source/from-env)]))
+(defstate environment :start env)
 

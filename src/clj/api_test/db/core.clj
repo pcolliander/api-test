@@ -4,7 +4,7 @@
     [camel-snake-kebab.core :refer [->kebab-case-keyword]]
     [conman.core :as conman]
     [mount.core :refer [defstate]]
-    [api-test.config :refer [env]]))
+    [api-test.config :refer [environment]]))
 
 (defn result-one-snake->kebab
     [this result options]
@@ -30,7 +30,7 @@
 
 
 (defstate ^:dynamic *db*
-  :start (conman/connect! {:jdbc-url (env :database-url)})
+  :start (conman/connect! {:jdbc-url (environment :database-url)})
          :stop (conman/disconnect! *db*))
 
 (conman/bind-connection *db* "sql/queries.sql")

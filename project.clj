@@ -9,8 +9,8 @@
                  [org.clojure/clojure "1.9.0-alpha16"] ; spec
                  [buddy/buddy-auth "2.0.0"]
                  [compojure "1.5.1"]
-                 [cprop "0.1.9"]
                  [conman "0.6.8"]
+                 [environ "1.1.0"]
                  [hiccup "1.0.5"]
                  [migratus "1.0.0"]
                  [mount "0.1.11"]
@@ -36,6 +36,7 @@
   :plugins [[lein-ring "0.9.7"]
             [migratus-lein "0.5.2"]
             [lein-cljsbuild "1.1.5"]
+            [lein-environ "1.1.0"]
             [lein-figwheel "0.5.13"]]
 
   ;; :migratus {:store :database :db ~(get (System/getenv) "DATABASE_URL)}
@@ -47,7 +48,6 @@
   :target-path "target/%s/"
 
   :ring {:handler api-test.handler/app}
-  ;; :main  clj.api-test.handler
 
   :figwheel
 		{:http-server-root "public"
