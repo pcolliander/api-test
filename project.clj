@@ -43,9 +43,11 @@
   :jvm-opts ["-server" "-Dconf=.lein-env"]
 
   :resource-paths ["resources" "target/cljsbuild"]
+  :source-paths ["src/clj" "src/cljc"]
   :target-path "target/%s/"
 
   :ring {:handler api-test.handler/app}
+  ;; :main  clj.api-test.handler
 
   :figwheel
 		{:http-server-root "public"
