@@ -17,6 +17,7 @@
 CREATE TABLE IF NOT EXISTS chat 
 (
   id SERIAL PRIMARY KEY, 
+  organisation_id SERIAL REFERENCES organisation(id) ON DELETE CASCADE,
   name VARCHAR (200), 
   is_private BOOLEAN,
   is_self_chat BOOLEAN,

@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS message
 (
   id serial PRIMARY KEY,
-  chat_id serial REFERENCES chat(id),
+  chat_id serial REFERENCES chat(id) ON DELETE CASCADE,
   person_id serial REFERENCES person(id),
   message VARCHAR (3000),
   timestamp TIMESTAMP WITH TIME ZONE

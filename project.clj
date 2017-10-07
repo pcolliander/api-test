@@ -7,7 +7,7 @@
                  ; server-side
                  [org.clojure/clojure "1.8.0"]
                  [org.clojure/clojure "1.9.0-alpha16"] ; spec
-                 [buddy/buddy-auth "2.0.0"]
+                 [buddy "2.0.0"]
                  [compojure "1.5.1"]
                  [conman "0.6.8"]
                  [environ "1.1.0"]

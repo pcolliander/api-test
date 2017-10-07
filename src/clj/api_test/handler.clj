@@ -4,6 +4,7 @@
              [buddy.auth.backends :as backends]
              [buddy.auth :refer [authenticated? throw-unauthorized]]
              [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
+             [buddy.hashers :as hashers]
              [buddy.sign.jwt :as jwt]
              [clj-time.core :as clj-time]
              (clj-time [format :as timef] [coerce :as timec])
@@ -52,7 +53,8 @@
   (POST "/chats" request
     (let [{:keys [name is-private]} (:body request)
           person-id ((get request :identity) :id)
-          chat-id (:id (db/add-chat! {:name name :is-private is-private :is-self-chat false}))]
+          chat-id (:id (db/add-chat! {:organisation-id 1 :name name :is-private is-private :is-direct-message false :is-group-direct-message false :is-self-chat false}))]
+
 
       (db/add-chat-permission! {:chat-id chat-id :person-id person-id})
 
@@ -98,7 +100,7 @@
       (if (some? (db/get-person-by-username {:username username} ))
         {:status 400 :body {:error "A user with that username exists already"}}
         (do
-          (let [user (db/add-person! {:username (clojure.string/trim username) :password password})]
+          (let [user (db/add-person! {:username (clojure.string/trim username) :password (hashers/derive password)})]
             (db/add-person-to-organisation! {:organisation-id 1 :person-id (:id user)})
             (redirect-with-token (sign-jwt-token user)))))))
 
@@ -135,7 +137,7 @@
               found-password (and get-password (get-password :password))
               person (db/get-person-by-username {:username username})]
 
-           (if (and (some? found-password) (= password found-password))
+           (if (and (some? found-password) (hashers/check password found-password))
              (redirect-with-token (sign-jwt-token person))
              {:status 401 :body {:desc "wrong password"}})))
 
