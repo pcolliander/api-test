@@ -1,15 +1,16 @@
 (ns api-test.handler
-  (:require  [api-test.db.core :as db]
+  (:require  [api-test.db.core :refer [*db*] :as db]
              [api-test.config :refer [environment]]
              [buddy.auth.backends :as backends]
              [buddy.auth :refer [authenticated? throw-unauthorized]]
              [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
              [buddy.hashers :as hashers]
              [buddy.sign.jwt :as jwt]
+             [conman.core :as conman]
              [clj-time.core :as clj-time]
              (clj-time [format :as timef] [coerce :as timec])
              [compojure.core :refer :all]
-             [compojure.handler :as compojure-handler] 
+             [compojure.handler :as compojure-handler]
              [compojure.route :as route]
              [hiccup.core :as hiccup]
              [hiccup.form :refer [form-to text-field password-field submit-button]]
@@ -30,8 +31,8 @@
   (jwt/sign {:id id :username username} (environment :secret-key)))
 
 (defroutes app-routes
-  (GET "/" request 
-    (if (authenticated? request) 
+  (GET "/" request
+    (if (authenticated? request)
       (render-file "templates/index.html" {})
       (redirect "/login")))
 
@@ -40,70 +41,85 @@
       {:status 200 :body {:data (get request :identity)}}
       {:status 401 }))
 
-  (GET "/chats" request 
+  (GET "/chats" request
     (let [person-id ((get request :identity) :id)
           chats (db/get-chats {:person-id person-id})
           contact-chats (filter #(not= (:person-id %) person-id) (db/get-contact-chats {:person-id person-id}))
-          self-chat (db/get-self-chat {:person-id person-id}) 
-          all-contact-chats (conj contact-chats self-chat) 
+          self-chat (db/get-self-chat {:person-id person-id})
+          all-contact-chats (conj contact-chats self-chat)
           any-contact-chats?  (< 0 (count (filter some? all-contact-chats))) ]
 
       {:status 200 :body {:chats chats :contact-chats (if any-contact-chats? all-contact-chats [])  }}))
 
   (POST "/chats" request
     (let [{:keys [name is-private]} (:body request)
-          person-id ((get request :identity) :id)
-          chat-id (:id (db/add-chat! {:organisation-id 1 :name name :is-private is-private :is-direct-message false :is-group-direct-message false :is-self-chat false}))]
+          person-id ((get request :identity) :id)]
 
+      (let [chat-id
+            (conman/with-transaction [*db*]
+              (let [transaction-chat-id (:id (db/add-chat! {:organisation-id 1 :name name :is-private is-private :is-direct-message false :is-group-direct-message false :is-self-chat false}))]
+                (db/add-chat-permission! {:chat-id transaction-chat-id :person-id person-id})
+                transaction-chat-id))]
 
-      (db/add-chat-permission! {:chat-id chat-id :person-id person-id})
-
-      {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}))
+            {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}
+      )))
 
   (POST "/contacts/:contact-id/chats" request
         (let [person-id ((get request :identity) :id)
               contact-id (Integer/parseInt (get-in request [:route-params :contact-id]))
               is-self-chat (= person-id contact-id)]
 
-          (println "contact-id " contact-id)
-          (println "is-self-chat " is-self-chat)
-          (println "person-id " person-id)
-
-          (if is-self-chat 
+          (if is-self-chat
             (let [self-chat-exists? (db/self-chat-exists? {:person-id person-id})]
               (if (some? self-chat-exists?)
                   {:status 400 }
-                (do 
-                  (let [chat-id (:id (db/add-chat! {:organisation-id 1 :name "" :is-private true :is-self-chat is-self-chat :is-direct-message true :is-group-direct-message false}))
-                        username ((get request :identity) :username) ]
+                (do
+                  (let [username ((get request :identity) :username)
+                        chat-id
 
-                    (db/add-chat-permission! {:chat-id chat-id :person-id person-id}) 
+                    (conman/with-transaction [*db*]
+                       (let [transaction-chat-id (:id (db/add-chat! {:organisation-id 1 :name "" :is-private true :is-self-chat is-self-chat :is-direct-message true :is-group-direct-message false}))]
+                          (db/add-chat-permission! {:chat-id transaction-chat-id :person-id person-id})
+                          transaction-chat-id ))]
+
                     {:status 201 :body {:chat {:chat-id chat-id :is-self-chat is-self-chat :person-id person-id :username username  }}}))))
 
             (let [contact-chat-exists? (db/contact-chat-exists? {:person-id person-id :contact-id contact-id})]
               (if (some? contact-chat-exists?)
                 {:status 400 }
 
-                (let [chat-id (:id (db/add-chat! {:organisation-id 1 :name "" :is-private true :is-self-chat is-self-chat :is-direct-message true :is-group-direct-message false}))
-                      contact-username (:username (db/get-person-by-id {:person-id contact-id}))]
+                (let [contact-username (:username (db/get-person-by-id {:person-id contact-id}))
+                      chat-id
+                        (conman/with-transaction [*db*]
+                          (let [transaction-chat-id (:id (db/add-chat! {:organisation-id 1
+                                                                               :name ""
+                                                                               :is-private true
+                                                                               :is-self-chat is-self-chat
+                                                                               :is-direct-message true
+                                                                               :is-group-direct-message false}))]
 
-                  (db/add-chat-permission! {:chat-id chat-id :person-id person-id})
-                  (db/add-chat-permission! {:chat-id chat-id :person-id contact-id})
-                  
+                            (db/add-chat-permission! {:chat-id transaction-chat-id :person-id person-id})
+                            (db/add-chat-permission! {:chat-id transaction-chat-id :person-id contact-id})
+
+                             transaction-chat-id) )]
 
                   {:status 201 :body {:chat {:chat-id chat-id :username contact-username :person-id contact-id :is-self-chat is-self-chat }} }))))))
 
-  (POST "/users" request
+  (POST "/people" request
     (let [username (get-in request [:params :username])
           password (get-in request [:params :password])]
-          
+
       (if (some? (db/get-person-by-username {:username username} ))
         {:status 400 :body {:error "A user with that username exists already"}}
         (do
-          (let [user (db/add-person! {:username (clojure.string/trim username) :password (hashers/derive password)})]
-            (db/add-person-to-organisation! {:organisation-id 1 :person-id (:id user)})
-            (redirect-with-token (sign-jwt-token user)))))))
+          (let [user
+            (conman/with-transaction [*db*]
+                  (let [transaction-user (db/add-person! {:username (clojure.string/trim username) :password (hashers/derive password)})]
+                  (db/add-person-to-organisation! {:organisation-id 1 :person-id (:id transaction-user)})
 
+                   transaction-user ))]
+
+            (redirect-with-token (sign-jwt-token user)))))))
 
   (GET "/chats/:chat-id/messages" request
     (when (authenticated? request)
@@ -144,7 +160,7 @@
   (GET "/login" request
     (if (authenticated? request)
         (redirect "/")
-     (hiccup/html 
+     (hiccup/html
        (form-to [:post "/login"]
           [:h2 "Sign in"]
           (text-field {:placeholder "username"} "username")
@@ -168,7 +184,7 @@
 
 (defn my-unauthorized-handler [request metadata] {:status 403})
 
-(def jwt-token-backend (backends/jws 
+(def jwt-token-backend (backends/jws
   {:secret (environment :secret-key) :unauthorized-handler my-unauthorized-handler}))
 
 (defn print-identity-in-request [handler] ; debug
