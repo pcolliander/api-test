@@ -60,7 +60,7 @@
 
       {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}))
 
-  (POST "/people/:contact-id/chats" request
+  (POST "/contacts/:contact-id/chats" request
         (let [person-id ((get request :identity) :id)
               contact-id (Integer/parseInt (get-in request [:route-params :contact-id]))
               is-self-chat (= person-id contact-id)]
@@ -151,7 +151,7 @@
           (password-field {:placeholder "password"} "password")
           (submit-button "login"))
 
-       (form-to [:post "/users"]
+       (form-to [:post "/people"]
           [:h2 "Sign up"]
           (text-field {:placeholder "username"} "username")
           (password-field {:placeholder "password"} "password")

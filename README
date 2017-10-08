@@ -7,3 +7,6 @@ lein migratus migrate
 
 ; rollback
 lein migrate rollback
+
+; Run ‘down’ for all migrations that have been  run, and ‘up’ for all migrations.
+lein migratus reset

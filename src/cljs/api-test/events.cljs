@@ -39,7 +39,7 @@
   :add-chat-with-contact 
   chat-interceptors
   (fn [cofx [action id]]
-    {:http-client-post {:url (str "http://localhost:3000/people/"id"/chats")
+    {:http-client-post {:url (str "http://localhost:3000/contacts/"id"/chats")
                         :params {:json-params {:contact-user-id id}}
                         :success-handler [:add-chat-with-contact-success]} }))
 
