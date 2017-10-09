@@ -7,7 +7,7 @@
              [buddy.hashers :as hashers]
              [buddy.sign.jwt :as jwt]
              [conman.core :as conman]
-             [clj-time.core :as clj-time]
+             [clj-time.core :as time]
              (clj-time [format :as timef] [coerce :as timec])
              [compojure.core :refer :all]
              [compojure.handler :as compojure-handler]
@@ -28,7 +28,10 @@
   (assoc (redirect "/") :cookies {"token" {:value token :http-only true}})) ; make ":secure true" when I've got SSL.
 
 (defn sign-jwt-token [{:keys [id username]}]
-  (jwt/sign {:id id :username username} (environment :secret-key)))
+  (jwt/sign {:id id
+             :username username
+             :exp (timec/to-timestamp (time/plus (time/now ) (time/hours 1)))}
+          (environment :secret-key)))
 
 (defroutes app-routes
   (GET "/" request
@@ -141,7 +144,7 @@
       (let [message (get-in request [:body :message])
             person-id (get-in request [:identity :id])
             chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
-            timestamp (timec/to-timestamp (clj-time/now))
+            timestamp (timec/to-timestamp (time/now))
             id (:id (db/add-message! {:chat-id chat-id :person-id person-id :message message :timestamp timestamp})) ] ; need to add a check that the user actually is authorised to post to this chat.
 
         {:status 201 :body {:message {:id id :message message :chat-id chat-id :username (get-in request [:identity :username]) :timestamp timestamp } }})))
