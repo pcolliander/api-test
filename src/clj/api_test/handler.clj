@@ -1,6 +1,7 @@
 (ns api-test.handler
   (:require  [api-test.db.core :refer [*db*] :as db]
              [api-test.config :refer [environment]]
+             [api-test.services.auth :refer [sign-jwt-token]]
              [buddy.auth.backends :as backends]
              [buddy.auth :refer [authenticated? throw-unauthorized]]
              [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
@@ -27,11 +28,6 @@
 (defn redirect-with-token [token]
   (assoc (redirect "/") :cookies {"token" {:value token :http-only true}})) ; make ":secure true" when I've got SSL.
 
-(defn sign-jwt-token [{:keys [id username]}]
-  (jwt/sign {:id id
-             :username username
-             :exp (timec/to-timestamp (time/plus (time/now ) (time/hours 1)))}
-          (environment :secret-key)))
 
 (defroutes app-routes
   (GET "/" request
