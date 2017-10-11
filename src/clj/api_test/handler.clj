@@ -2,6 +2,8 @@
   (:require  [api-test.db.core :refer [*db*] :as db]
              [api-test.config :refer [environment]]
              [api-test.services.auth :refer [sign-jwt-token]]
+             [api-test.services.contact :as contact-service]
+             [api-test.services.message :as message-service]
              [buddy.auth.backends :as backends]
              [buddy.auth :refer [authenticated? throw-unauthorized]]
              [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
@@ -35,7 +37,7 @@
       (render-file "templates/index.html" {})
       (redirect "/login")))
 
-  (GET "/data" request
+  (GET "/self" request
     (if (authenticated? request)
       {:status 200 :body {:data (get request :identity)}}
       {:status 401 }))
@@ -50,6 +52,7 @@
 
       {:status 200 :body {:chats chats :contact-chats (if any-contact-chats? all-contact-chats [])  }}))
 
+  ; move to service
   (POST "/chats" request
     (let [{:keys [name is-private]} (:body request)
           person-id ((get request :identity) :id)]
@@ -122,18 +125,18 @@
 
   (GET "/chats/:chat-id/messages" request
     (when (authenticated? request)
-      (let [person-id (get-in request [:identity :id])
-           chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
-           messages (into [] (db/get-messages-by-chat {:chat-id chat-id :person-id person-id} ))]
+      (let [person (:identity request)
+            chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
+            messages (message-service/get-by-chat chat-id person)]
 
       {:status 200 :body {:chat-id chat-id :messages messages }})))
 
   (GET "/contacts" request
     (when (authenticated? request)
-      (let [person-id (get-in request [:identity :id])
-        contacts (db/get-contacts-by-organisation {:organisation-id 1})]  ; hard-code "1" as org for now.
+      (let [person (:identity request)
+            contacts (contact-service/get-all person)] 
 
-        {:status 200 :body {:contacts contacts }})))
+        {:status 200 :body {:contacts contacts}})))
 
   (POST "/chats/:chat-id/messages" request
     (when (authenticated? request)
@@ -175,7 +178,7 @@
 
   (route/not-found "Not Found"))
 
-(defn set-authorisation-header-from-cookie [handler] ; this must check expiry timestamp of JWT token at some point.
+(defn set-authorisation-header-from-cookie [handler]
   (fn [request]
     (if-let [token (get-in request [:cookies "token" :value])]
       (handler (assoc-in request [:headers "authorization"] (str "Token " token)))

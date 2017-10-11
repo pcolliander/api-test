@@ -114,7 +114,7 @@
 (reg-event-fx
   :get-user-meta-data
   (fn [db [action]]
-    {:http-client-get {:url "http://localhost:3000/data" 
+    {:http-client-get {:url "http://localhost:3000/self" 
                        :success-handler [:insert-user-meta-data] }}))
 
 ; ----------
