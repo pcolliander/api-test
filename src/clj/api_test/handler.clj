@@ -2,6 +2,7 @@
   (:require  [api-test.db.core :refer [*db*] :as db]
              [api-test.config :refer [environment]]
              [api-test.services.auth :refer [sign-jwt-token]]
+             [api-test.services.chat :as chat-service]
              [api-test.services.contact :as contact-service]
              [api-test.services.message :as message-service]
              [buddy.auth.backends :as backends]
@@ -42,6 +43,7 @@
       {:status 200 :body {:data (get request :identity)}}
       {:status 401 }))
 
+  ; move to service
   (GET "/chats" request
     (let [person-id ((get request :identity) :id)
           chats (db/get-chats {:person-id person-id})
@@ -52,20 +54,14 @@
 
       {:status 200 :body {:chats chats :contact-chats (if any-contact-chats? all-contact-chats [])  }}))
 
-  ; move to service
   (POST "/chats" request
     (let [{:keys [name is-private]} (:body request)
-          person-id ((get request :identity) :id)]
+          person (:identity request)
+          chat-id (chat-service/add-chat person is-private name)]
 
-      (let [chat-id
-            (conman/with-transaction [*db*]
-              (let [transaction-chat-id (:id (db/add-chat! {:organisation-id 1 :name name :is-private is-private :is-direct-message false :is-group-direct-message false :is-self-chat false}))]
-                (db/add-chat-permission! {:chat-id transaction-chat-id :person-id person-id})
-                transaction-chat-id))]
+      {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}))
 
-            {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}
-      )))
-
+  ; move to service
   (POST "/contacts/:contact-id/chats" request
         (let [person-id ((get request :identity) :id)
               contact-id (Integer/parseInt (get-in request [:route-params :contact-id]))
@@ -107,6 +103,7 @@
 
                   {:status 201 :body {:chat {:chat-id chat-id :username contact-username :person-id contact-id :is-self-chat is-self-chat }} }))))))
 
+  ; move to service
   (POST "/people" request
     (let [username (get-in request [:params :username])
           password (get-in request [:params :password])]
@@ -134,10 +131,11 @@
   (GET "/contacts" request
     (when (authenticated? request)
       (let [person (:identity request)
-            contacts (contact-service/get-all person)] 
+            contacts (contact-service/get-all person)]
 
         {:status 200 :body {:contacts contacts}})))
 
+  ; move to service
   (POST "/chats/:chat-id/messages" request
     (when (authenticated? request)
       (let [message (get-in request [:body :message])
@@ -148,6 +146,7 @@
 
         {:status 201 :body {:message {:id id :message message :chat-id chat-id :username (get-in request [:identity :username]) :timestamp timestamp } }})))
 
+  ; move to service
   (POST "/login" request
         (let [username (get-in request [:params :username])
               password (get-in request [:params :password])
