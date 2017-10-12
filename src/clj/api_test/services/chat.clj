@@ -14,3 +14,10 @@
         (db/add-chat-permission! {:chat-id chat-id :person-id (:id person)})
         chat-id)))
 
+(defn get-all [person]
+  (let [chats (db/get-chats {:person-id (:id person)})
+        contact-chats (db/get-contact-chats {:person-id (:id person)})
+        self-chat (db/get-self-chat {:person-id (:id person)})]
+
+    {:chats chats :contact-chats contact-chats :self-chat self-chat}))
+

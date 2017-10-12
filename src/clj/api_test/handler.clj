@@ -31,7 +31,6 @@
 (defn redirect-with-token [token]
   (assoc (redirect "/") :cookies {"token" {:value token :http-only true}})) ; make ":secure true" when I've got SSL.
 
-
 (defroutes app-routes
   (GET "/" request
     (if (authenticated? request)
@@ -43,23 +42,20 @@
       {:status 200 :body {:data (get request :identity)}}
       {:status 401 }))
 
-  ; move to service
   (GET "/chats" request
-    (let [person-id ((get request :identity) :id)
-          chats (db/get-chats {:person-id person-id})
-          contact-chats (filter #(not= (:person-id %) person-id) (db/get-contact-chats {:person-id person-id}))
-          self-chat (db/get-self-chat {:person-id person-id})
-          all-contact-chats (conj contact-chats self-chat)
-          any-contact-chats?  (< 0 (count (filter some? all-contact-chats))) ]
+    (if (authenticated? request)
+      (let [person (:identity request)
+       {:keys [chats contact-chats self-chat]} (chat-service/get-all person)]
 
-      {:status 200 :body {:chats chats :contact-chats (if any-contact-chats? all-contact-chats [])  }}))
+      {:status 200 :body {:chats chats :contact-chats contact-chats :self-chat self-chat }})))
 
   (POST "/chats" request
-    (let [{:keys [name is-private]} (:body request)
-          person (:identity request)
-          chat-id (chat-service/add-chat person is-private name)]
+    (if (authenticated? request)
+      (let [{:keys [name is-private]} (:body request)
+            person (:identity request)
+            chat-id (chat-service/add-chat person is-private name)]
 
-      {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}}))
+        {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}})))
 
   ; move to service
   (POST "/contacts/:contact-id/chats" request

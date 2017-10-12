@@ -51,7 +51,7 @@ WHERE person_id = :person-id
 SELECT chat_id, username, person_id, is_self_chat FROM chat
  INNER JOIN chat_permission ON chat_permission.chat_id=chat.id
  INNER JOIN person ON chat_permission.person_id = person.id
-WHERE is_direct_message = true AND is_self_chat = FALSE
+WHERE is_direct_message = true AND is_self_chat = FALSE AND person_id != :person-id
 AND chat_id in
   (select id from chat 
       INNER JOIN chat_permission on chat.id = chat_permission.chat_id
