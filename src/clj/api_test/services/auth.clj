@@ -4,9 +4,9 @@
             [clj-time.core :as time]
             (clj-time [coerce :as timec])))
 
-(defn sign-jwt-token [{:keys [id username]}]
+(defn sign-jwt-token [{:keys [id username organisation-id]}]
   (jwt/sign {:id id
-             :org-id 1
+             :organisation-id organisation-id
              :username username
              :exp (timec/to-timestamp (time/plus (time/now ) (time/hours 1)))}
     (environment :secret-key)))

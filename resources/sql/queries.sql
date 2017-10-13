@@ -86,7 +86,8 @@ VALUES (:organisation-id, :person-id)
 
 -- :name get-person-by-username :? :1
 -- :doc retrieve a user given the username.
-SELECT id, username FROM person
+SELECT id, username, organisation_id FROM person
+INNER JOIN organisation_permission ON person.id=organisation_permission.person_id
 WHERE username = :username
 
 -- :name get-person-by-id :? :1

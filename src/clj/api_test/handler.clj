@@ -5,6 +5,7 @@
              [api-test.services.chat :as chat-service]
              [api-test.services.contact :as contact-service]
              [api-test.services.message :as message-service]
+             [api-test.services.people :as people-service]
              [buddy.auth.backends :as backends]
              [buddy.auth :refer [authenticated? throw-unauthorized]]
              [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
@@ -131,26 +132,21 @@
 
         {:status 200 :body {:contacts contacts}})))
 
-  ; move to service
   (POST "/chats/:chat-id/messages" request
     (when (authenticated? request)
       (let [message (get-in request [:body :message])
-            person-id (get-in request [:identity :id])
-            chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
-            timestamp (timec/to-timestamp (time/now))
-            id (:id (db/add-message! {:chat-id chat-id :person-id person-id :message message :timestamp timestamp})) ] ; need to add a check that the user actually is authorised to post to this chat.
+            person (:identity request)
+            chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))  ; can this be done simpler?
+            {:keys [id timestamp]} (message-service/add-one person chat-id  message)]
 
-        {:status 201 :body {:message {:id id :message message :chat-id chat-id :username (get-in request [:identity :username]) :timestamp timestamp } }})))
+        {:status 201 :body {:message {:id id :message message :chat-id chat-id :username (:username person) :timestamp timestamp } }})))
 
-  ; move to service
   (POST "/login" request
         (let [username (get-in request [:params :username])
               password (get-in request [:params :password])
-              get-password (db/get-person-password-by-username {:username username})
-              found-password (and get-password (get-password :password))
-              person (db/get-person-by-username {:username username})]
+              {:keys [ok? person]} (people-service/login username password)]
 
-           (if (and (some? found-password) (hashers/check password found-password))
+           (if ok?
              (redirect-with-token (sign-jwt-token person))
              {:status 401 :body {:desc "wrong password"}})))
 

@@ -110,7 +110,6 @@
           id (:id (:data (:body response)))]
       (assoc-in db [:logged-in-user] {:id id :username (clojure.string/capitalize username)}))))
 
-
 (reg-event-fx
   :get-user-meta-data
   (fn [db [action]]
@@ -124,8 +123,7 @@
   (fn [cofx [action name]]
     {:http-client-post {:url "http://localhost:3000/chats"
                         :params {:json-params {:name name :is-private false}}
-                        :success-handler [:add-chat-success]
-                        }}))
+                        :success-handler [:add-chat-success] }}))
 (reg-event-db
   :add-chat-success
   chat-interceptors

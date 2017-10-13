@@ -60,7 +60,6 @@
 	{:builds
 		 {:app
 			{:source-paths ["src/cljs/api-test"]
-       ;; :figwheel true; {:on-jsload "api-test.core/mount-root"}
        :figwheel {:on-jsload "api-test.core/mount-root"}
 			 :compiler
 										 {:main          "api-test.core"
@@ -83,8 +82,7 @@
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring/ring-mock "0.3.0"]
                         [re-frisk "0.5.0"]
-                        [org.clojure/test.check "0.9.0"]
-                        ]}
+                        [org.clojure/test.check "0.9.0"] ]}
 
    :uberjar { :prep-tasks ["compile" ["cljsbuild" "once" "min"]]}
    })
