@@ -1,6 +1,5 @@
 (ns api-test.handler
-  (:require  [api-test.db.core :refer [*db*] :as db]
-             [api-test.config :refer [environment]]
+  (:require  [api-test.config :refer [environment]]
              [api-test.services.auth :refer [sign-jwt-token]]
              [api-test.services.chat :as chat-service]
              [api-test.services.contact :as contact-service]
@@ -9,9 +8,7 @@
              [buddy.auth.backends :as backends]
              [buddy.auth :refer [authenticated? throw-unauthorized]]
              [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
-             [buddy.hashers :as hashers]
              [buddy.sign.jwt :as jwt]
-             [conman.core :as conman]
              [clj-time.core :as time]
              (clj-time [format :as timef] [coerce :as timec])
              [compojure.core :refer :all]
@@ -24,8 +21,7 @@
              [ring.middleware.defaults :refer :all]
              [ring.middleware.json :as json-middleware]
              [ring.middleware.resource :refer :all]
-             [ring.util.response :refer :all]
-  ))
+             [ring.util.response :refer :all]))
 
 (mount/start)
 
@@ -58,64 +54,16 @@
 
         {:status 201 :body {:chat {:chat-id chat-id :name name :is-private is-private}}})))
 
-  ; move to service
   (POST "/contacts/:contact-id/chats" request
-        (let [person-id ((get request :identity) :id)
+        (let [person (:identity request)
               contact-id (Integer/parseInt (get-in request [:route-params :contact-id]))
-              is-self-chat (= person-id contact-id)]
+              organisation-id 1
+              {:keys [ok? error-message chat-id username person-id is-self-chat]} (chat-service/add-contact-chat person contact-id organisation-id)]
 
-          (if is-self-chat
-            (let [self-chat-exists? (db/self-chat-exists? {:person-id person-id})]
-              (if (some? self-chat-exists?)
-                  {:status 400 }
-                (do
-                  (let [username ((get request :identity) :username)
-                        chat-id
+    (if ok?
+      {:status 201 :body {:chat {:chat-id chat-id :username username :person-id contact-id :is-self-chat is-self-chat }}}
+      {:status 400 :body {:error error-message}})))
 
-                    (conman/with-transaction [*db*]
-                       (let [transaction-chat-id (:id (db/add-chat! {:organisation-id 1 :name "" :is-private true :is-self-chat is-self-chat :is-direct-message true :is-group-direct-message false}))]
-                          (db/add-chat-permission! {:chat-id transaction-chat-id :person-id person-id})
-                          transaction-chat-id ))]
-
-                    {:status 201 :body {:chat {:chat-id chat-id :is-self-chat is-self-chat :person-id person-id :username username  }}}))))
-
-            (let [contact-chat-exists? (db/contact-chat-exists? {:person-id person-id :contact-id contact-id})]
-              (if (some? contact-chat-exists?)
-                {:status 400 }
-
-                (let [contact-username (:username (db/get-person-by-id {:person-id contact-id}))
-                      chat-id
-                        (conman/with-transaction [*db*]
-                          (let [transaction-chat-id (:id (db/add-chat! {:organisation-id 1
-                                                                               :name ""
-                                                                               :is-private true
-                                                                               :is-self-chat is-self-chat
-                                                                               :is-direct-message true
-                                                                               :is-group-direct-message false}))]
-
-                            (db/add-chat-permission! {:chat-id transaction-chat-id :person-id person-id})
-                            (db/add-chat-permission! {:chat-id transaction-chat-id :person-id contact-id})
-
-                             transaction-chat-id) )]
-
-                  {:status 201 :body {:chat {:chat-id chat-id :username contact-username :person-id contact-id :is-self-chat is-self-chat }} }))))))
-
-  ; move to service
-  (POST "/people" request
-    (let [username (get-in request [:params :username])
-          password (get-in request [:params :password])]
-
-      (if (some? (db/get-person-by-username {:username username} ))
-        {:status 400 :body {:error "A user with that username exists already"}}
-        (do
-          (let [user
-            (conman/with-transaction [*db*]
-                  (let [transaction-user (db/add-person! {:username (clojure.string/trim username) :password (hashers/derive password)})]
-                  (db/add-person-to-organisation! {:organisation-id 1 :person-id (:id transaction-user)})
-
-                   transaction-user ))]
-
-            (redirect-with-token (sign-jwt-token user)))))))
 
   (GET "/chats/:chat-id/messages" request
     (when (authenticated? request)
@@ -141,14 +89,25 @@
 
         {:status 201 :body {:message {:id id :message message :chat-id chat-id :username (:username person) :timestamp timestamp } }})))
 
-  (POST "/login" request
-        (let [username (get-in request [:params :username])
-              password (get-in request [:params :password])
-              {:keys [ok? person]} (people-service/login username password)]
+  ; LOGIN / SIGNUP
+  (POST "/signup" request
+    (let [username (get-in request [:params :username])
+          password (get-in request [:params :password])
+          organisation-id 1 ; hard-coded for now.
+          {:keys [ok? person error-message]} (people-service/signup username password organisation-id)]
 
-           (if ok?
-             (redirect-with-token (sign-jwt-token person))
-             {:status 401 :body {:desc "wrong password"}})))
+      (if ok?
+        (redirect-with-token (sign-jwt-token (assoc person :organisation-id organisation-id)))
+        {:status 400 :body {:error error-message}} )))
+
+  (POST "/login" request
+    (let [username (get-in request [:params :username])
+          password (get-in request [:params :password])
+          {:keys [ok? person error-message]} (people-service/login username password)]
+
+      (if ok?
+        (redirect-with-token (sign-jwt-token person))
+        {:status 401 :body {:error error-message}})))
 
   (GET "/login" request
     (if (authenticated? request)
@@ -160,7 +119,7 @@
           (password-field {:placeholder "password"} "password")
           (submit-button "login"))
 
-       (form-to [:post "/people"]
+       (form-to [:post "/signup"]
           [:h2 "Sign up"]
           (text-field {:placeholder "username"} "username")
           (password-field {:placeholder "password"} "password")

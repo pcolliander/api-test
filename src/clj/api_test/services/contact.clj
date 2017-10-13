@@ -3,5 +3,5 @@
             [conman.core :as conman] ))
 
 (defn get-all [person]
-  (db/get-contacts-by-organisation {:organisation-id (:org-id person)}))
+  (db/get-contacts-by-organisation {:organisation-id (:organisation-id person)}))
 

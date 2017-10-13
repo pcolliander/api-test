@@ -10,5 +10,15 @@
 
     (if (and found-password (hashers/check password found-password))
       {:ok? true :person person}
-      {:ok? false })))
+      {:ok? false :error-message "Wrong password!"})))
+
+(defn signup [username password organisation-id]
+  (if (some? (db/get-person-by-username {:username username} ))
+    {:ok? false :error-message "A user with that username exists already"}
+
+    (conman/with-transaction [*db*]
+      (let [person (db/add-person! {:username (clojure.string/trim username) :password (hashers/derive password)})]
+        (db/add-person-to-organisation! {:organisation-id organisation-id :person-id (:id person)})
+
+        {:ok? true :person person} ))))
 
