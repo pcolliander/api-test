@@ -39,8 +39,7 @@
             [lein-environ "1.1.0"]
             [lein-figwheel "0.5.13"]]
 
-  ;; :migratus {:store :database :db ~(get (System/getenv) "DATABASE_URL)}
-  :migratus {:store :database :db "postgresql://localhost:5432/chat-service?user=pcolliander"}
+  :migratus {:store :database :db ~(get (System/getenv) "DATABASE_URL")}
   :jvm-opts ["-server" "-Dconf=.lein-env"]
 
   :resource-paths ["resources" "target/cljsbuild"]
