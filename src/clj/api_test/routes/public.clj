@@ -1,7 +1,8 @@
 (ns api-test.routes.public
   (:require 
-            [api-test.services.people :as people-service]
             [api-test.services.auth :refer [sign-jwt-token]]
+            [api-test.services.person :as person-service]
+            [api-test.services.organisation :as organisation-service]
             [buddy.auth :refer [authenticated?]]
             [compojure.core :refer [defroutes GET POST]]
             [hiccup.core :as hiccup]
@@ -18,16 +19,23 @@
       (render-file "templates/index.html" {})
       (redirect "/login")))
 
+  (POST "/organisation" [name]
+        (println "organisation-name " name)
+        (organisation-service/add-organisation name)
+        
+        {:status 200}
+  )
+
   (POST "/signup" [username password]
     (let [organisation-id 1 ; hard-coded for now.
-         {:keys [ok? person error-message]} (people-service/signup username password organisation-id)]
+         {:keys [ok? person error-message]} (person-service/signup username password organisation-id)]
 
       (if ok?
         (redirect-with-token (sign-jwt-token (assoc person :organisation-id organisation-id)))
         {:status 400 :body {:error error-message}} )))
 
   (POST "/login" [username password]
-    (let [{:keys [ok? person error-message]} (people-service/login username password)]
+    (let [{:keys [ok? person error-message]} (person-service/login username password)]
 
       (if ok?
         (redirect-with-token (sign-jwt-token person))
@@ -47,6 +55,13 @@
           [:h2 "Sign up"]
           (text-field {:placeholder "username"} "username")
           (password-field {:placeholder "password"} "password")
-          (submit-button "signup"))))))
+          (submit-button "signup"))
+
+       (form-to [:post "/organisation"]
+          [:h2 "Add Organisation"]
+          (text-field {:placeholder "organisation name"} "name")
+          (submit-button "Create"))
+       
+       ))))
 
 

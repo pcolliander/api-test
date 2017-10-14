@@ -22,7 +22,7 @@
 
 (mount/start)
 
-(defn- print-identity-in-request [handler] ; debug
+(defn- print-identity [handler] ; debug
   (fn [request]
     (println)
     (println "identity: " (:identity request))
@@ -56,7 +56,7 @@
 
 (def app
   (-> app-routes
-    (print-identity-in-request)
+    (print-identity)
     (wrap-authentication jwt-token-backend)
     (set-authorisation-header-from-cookie)
     (wrap-cookies)
@@ -64,6 +64,4 @@
     (wrap-resource "public")
     (json-middleware/wrap-json-body {:keywords? true})
     json-middleware/wrap-json-response))
-
-
 
