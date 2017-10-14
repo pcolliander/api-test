@@ -33,5 +33,5 @@
   :start (conman/connect! {:jdbc-url (environment :database-url)})
          :stop (conman/disconnect! *db*))
 
-(conman/bind-connection *db* "sql/queries.sql")
+(conman/bind-connection *db* "sql/contact.sql" "sql/chat.sql" "sql/person.sql" "sql/message.sql")
 
