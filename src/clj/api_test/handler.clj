@@ -25,7 +25,7 @@
 
 (mount/start)
 
-(defn redirect-with-token [token]
+(defn- redirect-with-token [token]
   (assoc (redirect "/") :cookies {"token" {:value token :http-only true}})) ; make ":secure true" when I've got SSL.
 
 (defroutes app-routes
@@ -90,20 +90,16 @@
         {:status 201 :body {:message {:id id :message message :chat-id chat-id :username (:username person) :timestamp timestamp } }})))
 
   ; LOGIN / SIGNUP
-  (POST "/signup" request
-    (let [username (get-in request [:params :username])
-          password (get-in request [:params :password])
-          organisation-id 1 ; hard-coded for now.
-          {:keys [ok? person error-message]} (people-service/signup username password organisation-id)]
+  (POST "/signup" [username password]
+    (let [organisation-id 1 ; hard-coded for now.
+         {:keys [ok? person error-message]} (people-service/signup username password organisation-id)]
 
       (if ok?
         (redirect-with-token (sign-jwt-token (assoc person :organisation-id organisation-id)))
         {:status 400 :body {:error error-message}} )))
 
-  (POST "/login" request
-    (let [username (get-in request [:params :username])
-          password (get-in request [:params :password])
-          {:keys [ok? person error-message]} (people-service/login username password)]
+  (POST "/login" [username password]
+    (let [{:keys [ok? person error-message]} (people-service/login username password)]
 
       (if ok?
         (redirect-with-token (sign-jwt-token person))
@@ -128,18 +124,18 @@
 
   (route/not-found "Not Found"))
 
-(defn set-authorisation-header-from-cookie [handler]
+(defn- set-authorisation-header-from-cookie [handler]
   (fn [request]
     (if-let [token (get-in request [:cookies "token" :value])]
       (handler (assoc-in request [:headers "authorization"] (str "Token " token)))
       (handler request))))
 
-(defn my-unauthorized-handler [request metadata] {:status 403})
+(defn- my-unauthorized-handler [request metadata] {:status 403})
 
 (def jwt-token-backend (backends/jws
   {:secret (environment :secret-key) :unauthorized-handler my-unauthorized-handler}))
 
-(defn print-identity-in-request [handler] ; debug
+(defn- print-identity-in-request [handler] ; debug
   (fn [request]
     (println "identity: " (get request :identity))
     (handler request)))
