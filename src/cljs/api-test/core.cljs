@@ -106,18 +106,11 @@
     [:span {:style {:font-style "italic" }} " " timestamp]
     [:span {:style {:display "block" :padding "0.1rem" }} message] ])
     
-(defonce messages (r/atom []))
-
-(defn update-messages! [message]
-  ;; (println "arg in update-messages! " arg))
-  ;; (swap! messages #(vec (take 10 (conj % message)))))
-  (swap! messages conj message))
-
 (defn main-page []
   (let [value (r/atom "")
         add-message #(if-not (-> % .-shiftKey)
                         (let [passed-value (-> % .-target .-value clojure.string/trim)]
-                          (dispatch [:add-message {:message  passed-value :chat-id @(subscribe [:active-chat])}])
+                          (dispatch [:add-message {:message passed-value :chat-id @(subscribe [:active-chat])}])
                           (reset! value "")))]
     (fn []
       [:div {:style {
@@ -141,7 +134,7 @@
                      :overflow-y "scroll"
                      :margin "1rem" }}]
 
-                 (->> (concat @(subscribe [:messages-by-chat]) @messages) ; currently appends all the messages-by-chat with the ws-messages. The ws-messages needs to be by chat-id.
+                 (->> @(subscribe [:messages-by-chat])
                    (map message-view)))
 
           (when @(subscribe [:active-chat]) 
@@ -167,7 +160,7 @@
 )
 
 (defn mount-root []
-  (ws/make-websocket! (str "ws://" (.-host js/location) "/ws") update-messages!)
+  (ws/make-websocket! (str "ws://" (.-host js/location) "/ws") #(dispatch [:ws-add-message %]))
   (r/render [main] (.getElementById js/document "app")))
 
 (mount-root)

@@ -41,6 +41,14 @@
 
 ; event handlers
 ; -------------------
+(reg-event-db
+  :ws-add-message
+  chat-interceptors
+  (fn [db [action message]]
+    (let [{:keys [chat-id]} message] 
+      (assoc-in db [:messages chat-id] (conj ((:messages db) chat-id) message))
+  )))
+
 (reg-event-fx
   :add-message
   (fn [cofx [action {:keys [message chat-id]}]]
@@ -99,9 +107,7 @@
   (fn [db [action response-body]]
     (let [chats (:chats response-body)
           contact-chats (:contact-chats response-body)
-          self-chat (:self-chat response-body)
-          
-          ]
+          self-chat (:self-chat response-body) ]
           
       (assoc db :all-chats {:contact-chats contact-chats :chats chats :self-chat self-chat} ))))
 
