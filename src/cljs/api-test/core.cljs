@@ -1,10 +1,11 @@
 (ns api-test.core
-  (:require 
-      [api-test.events]
-      [api-test.subs]
-      [reagent.core :as r]
-      [re-frame.core :refer [subscribe dispatch dispatch-sync]]))
+  (:require [api-test.events]
+            [api-test.websockets :as ws]
+            [api-test.subs]
+            [reagent.core :as r]
+            [re-frame.core :refer [subscribe dispatch dispatch-sync]]))
 
+(declare update-messages!)
 (enable-console-print!)
 
 (defn chat-view [{:keys [id name] }] 
@@ -24,14 +25,6 @@
         is-online (or is-current-user is-online)
         contact-has-chat (some #(when (= id (:person-id %)) %) @(subscribe [:contact-chats]))]
 
-    ;; (println)
-    ;; (println "username " username)
-    ;; (println "is-online " is-online)
-    ;; (println "chat-id " chat-id)
-    ;; (println "id " id)
-    ;; (println "active-chat " active-chat)
-    ;; (println)
-
     [:span {
        :style {
          :background (when (and active-chat (= chat-id active-chat)) "#6698c8")
@@ -42,14 +35,12 @@
                     (dispatch [:change-active-chat chat-id])
                     (if (some? contact-has-chat) 
                       (dispatch [:change-active-chat (:chat-id contact-has-chat)]) 
-                      (dispatch [:add-chat-with-contact id])))
-      }
+                      (dispatch [:add-chat-with-contact id]))) }
       [:i {:class (if is-online "fa fa-circle" "fa fa-circle-o" )
-      :style {
-       :color (when is-online "#1db91d")
-       :font-size "small"
-       :margin-right "0.4rem"
-      }}]  
+        :style {
+          :color (when is-online "#1db91d")
+          :font-size "small"
+          :margin-right "0.4rem"}}]  
 
      (or username "user-chat")
      (when is-current-user " (you)")]))
@@ -72,6 +63,8 @@
               :margin-left "1.5rem" }} 
 
        [:h2 "Contact List"]
+       ;[:button {:on-click #(ws/make-websocket! (str "ws://" (.-host js/location) "/ws") update-messages!)} "Create ws-connection"]
+
        (for [contact @(subscribe [:contacts])]
          [user-view (:id contact) (:username contact) (:is-online contact)])]
 
@@ -107,13 +100,18 @@
        )
    )
 
-(defn message-view [{:keys [username timestamp message]}]
+(defn message-view [{:keys [message username timestamp]}]
   [:div {:style {:margin "0.5rem"}}
-    [:span {:style {:color "#463636" :font-weight "bold" }} (-> username clojure.string/capitalize)] 
+    [:span {:style {:color "#463636" :font-weight "bold" }} (and username (-> username clojure.string/capitalize))] 
     [:span {:style {:font-style "italic" }} " " timestamp]
-    [:span {:style {:display "block" :padding "0.1rem" }} message]
-  ])
+    [:span {:style {:display "block" :padding "0.1rem" }} message] ])
     
+(defonce messages (r/atom []))
+
+(defn update-messages! [message]
+  ;; (println "arg in update-messages! " arg))
+  ;; (swap! messages #(vec (take 10 (conj % message)))))
+  (swap! messages conj message))
 
 (defn main-page []
   (let [value (r/atom "")
@@ -143,10 +141,11 @@
                      :overflow-y "scroll"
                      :margin "1rem" }}]
 
-                 (->> @(subscribe [:messages-by-chat])
+                 (->> (concat @(subscribe [:messages-by-chat]) @messages) ; currently appends all the messages-by-chat with the ws-messages. The ws-messages needs to be by chat-id.
                    (map message-view)))
 
-          [:input {:style {
+          (when @(subscribe [:active-chat]) 
+            [:input {:style {
                      :padding "1rem"
                      :width "100%" }
                    :on-change #(reset! value (-> % .-target .-value))
@@ -154,7 +153,7 @@
                                    13  (add-message %)
                                    nil)
                    :placeholder "Write your message here." 
-                   :value @value }]]
+                   :value @value }])]
       )))
 
 (defn main []
@@ -168,6 +167,7 @@
 )
 
 (defn mount-root []
+  (ws/make-websocket! (str "ws://" (.-host js/location) "/ws") update-messages!)
   (r/render [main] (.getElementById js/document "app")))
 
 (mount-root)

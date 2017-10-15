@@ -5,25 +5,27 @@
 
   :dependencies [
                  ; server-side
-                 [org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojure "1.9.0-alpha16"] ; spec
                  [buddy "2.0.0"]
+                 [clj-time "0.14.0"]
                  [compojure "1.5.1"]
+                 [com.cemerick/piggieback "0.2.2"]
                  [conman "0.6.8"]
+                 [camel-snake-kebab "0.4.0"]
                  [environ "1.1.0"]
                  [hiccup "1.0.5"]
                  [migratus "1.0.0"]
                  [mount "0.1.11"]
-                 [postgresql/postgresql "9.3-1102.jdbc41"]
-                 [selmer "1.10.0"]
-                 [ring/ring-json "0.3.1"]
+                 [org.clojure/clojure "1.8.0"]
+                 [org.clojure/clojure "1.9.0-alpha16"] ; spec
+                 [org.clojure/data.json "0.2.6"]
                  [org.clojure/tools.nrepl "0.2.13"]
-                 [com.cemerick/piggieback "0.2.2"]
+                 [org.immutant/immutant "2.1.9"]
+                 [postgresql/postgresql "9.3-1102.jdbc41"]
+                 [ring/ring-core "1.6.2"]
+                 [ring/ring-devel "1.6.2"] 
+                 [ring/ring-json "0.3.1"]
                  [ring/ring-defaults "0.2.1"]
-                 [clj-time "0.14.0"]
-                 [camel-snake-kebab "0.4.0"]
-
-                 ;; [com.fzakaria/slf4j-timbre "0.2"]
+                 [selmer "1.10.0"]
 
                  ; client-side
                  [org.clojure/clojurescript "1.9.908" :scope "provided"]
@@ -46,7 +48,7 @@
   :source-paths ["src/clj" "src/cljc"]
   :target-path "target/%s/"
 
-  :ring {:handler api-test.handler/app}
+  :main api-test.handler/start
 
   :figwheel
 		{:http-server-root "public"
@@ -58,27 +60,27 @@
 	:cljsbuild
 	{:builds
 		 {:app
-			{:source-paths ["src/cljs/api-test"]
+			{:source-paths ["src/cljs" "src/cljs/api-test"]
        :figwheel {:on-jsload "api-test.core/mount-root"}
 			 :compiler
 										 {:main          "api-test.core"
 											:asset-path    "/js/out"
-                      :preloads [re-frisk.preload]
+                      :preloads      [re-frisk.preload]
 											:output-to     "target/cljsbuild/public/js/app.js"
 											:output-dir    "target/cljsbuild/public/js/out"
 											:optimizations :none
 											:source-map    true}}
 			:min
-			{:source-paths ["src/cljs"]
+			{:source-paths ["src/cljs/" "src/cljs/api-test"]
 			 :compiler
 										 {:output-to     "target/cljsbuild/public/js/app.js"
-                      :preloads [re-frisk.preload]
+                      :preloads      [re-frisk.preload]
 											:output-dir    "target/uberjar"
 											:externs       ["react/externs/react.js"]
 											:optimizations :none}}}}
 
   :profiles
-  {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
+    {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring/ring-mock "0.3.0"]
                         [re-frisk "0.5.0"]
                         [org.clojure/test.check "0.9.0"] ]}

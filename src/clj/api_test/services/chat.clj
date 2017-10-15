@@ -9,7 +9,7 @@
                                       :is-group-direct-message false
                                       :is-self-chat false
                                       :name name
-                                      :organisation-id (:org-id person) }))]
+                                      :organisation-id (:organisation-id person) }))]
 
         (db/add-chat-permission! {:chat-id chat-id :person-id (:id person)})
         chat-id)))

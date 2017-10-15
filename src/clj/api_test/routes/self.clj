@@ -5,3 +5,4 @@
   (GET "/self" request
     {:status 200 :body {:data (:identity request)}}))
 
+
