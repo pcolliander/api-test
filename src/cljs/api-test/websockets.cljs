@@ -16,10 +16,12 @@
 
 (defn make-websocket! [url receive-handler]
   (println "attempting to connect websocket")
-  (if-let [chan (js/WebSocket. url)]
-    (do
-      (set! (.-onmessage chan) (receive-transit-msg! receive-handler))
-      (reset! ws-chan chan)
-      (println "Websocket connection established with: " url))
-    (throw (js/Error. "Websocket connection failed!"))))
+  (if-not @ws-chan  ; otherwise it opens multiple when saving, non-reloadable code (figwheel).
+    (if-let [chan (js/WebSocket. url)]
+      (do
+        (set! (.-onmessage chan) (receive-transit-msg! receive-handler))
+        (reset! ws-chan chan)
+        (println "Websocket connection established with: " url))
+      (throw (js/Error. "Websocket connection failed!")))
+    (println "already a connection open")))
 
