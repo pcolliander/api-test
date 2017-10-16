@@ -21,6 +21,7 @@
 ; -------------------
 (reg-fx
   :http-client-get
+
   (fn [{:keys [url success-handler]}]
     (go (let [response (<! (http-client/get url))]
       (dispatch (conj success-handler (:body response)))
@@ -38,6 +39,14 @@
   (fn [{:keys [message chat-id]}]
     (ws/send-transit-msg! {:message {:message message :chat-id chat-id}}) ))
 
+(reg-event-db
+  :ws-update-online-status
+  chat-interceptors
+  (fn [db [action response]]
+    (let [id (:id response)
+          connected (:connected response)]
+
+      (assoc-in db [:contacts (keyword (str id)) :is-online] connected))))
 
 ; event handlers
 ; -------------------
@@ -122,7 +131,7 @@
   :get-contacts-success
   chat-interceptors
   (fn [db [action response-body]]
-    (let [contacts (:contacts response-body)]
+    (let [contacts (:conv-contacts response-body)]
       (assoc db :contacts contacts))))
 
 ; ----------

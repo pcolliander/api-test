@@ -6,8 +6,11 @@
 (defroutes contact-routes
   (GET "/contacts" request
     (let [person (:identity request)
-          contacts (contact-service/get-all person)]
+          contacts (contact-service/get-all person)
+          conv-contacts (into {} (map (juxt :id identity) contacts))]
 
-      {:status 200 :body {:contacts contacts}}))
+      (println "conv-contacts " conv-contacts)
+
+      {:status 200 :body {:contacts contacts :conv-contacts conv-contacts}}))
 )
 

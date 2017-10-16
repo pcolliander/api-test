@@ -17,10 +17,23 @@
 
 (defn connect! [channel]
   (println "connecting to websocket!")
-  (swap! channels conj channel))
+  (swap! channels conj channel)
+
+  (let [person (get-person channel)
+        response (json/write-str(assoc person :connected true))]
+
+  (doseq [channel @channels]
+    (async/send! channel response))))
+
 
 (defn disconnect! [channel {:keys [code reason]}]
-  (swap! channels #(remove #{channel} %)))
+  (swap! channels #(remove #{channel} %))
+
+  (let [person  (get-person channel)
+        response (json/write-str(assoc person :connected false))]
+
+  (doseq [channel @channels]
+    (async/send! channel response))))
 
 (defn notify-clients! [channel msg]
   (let [person (get-person channel)

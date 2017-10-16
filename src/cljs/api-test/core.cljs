@@ -44,7 +44,7 @@
 
      (or username "user-chat")
      (when is-current-user " (you)")]))
-  
+
 
 (defn sidebar []
   (let [value (r/atom "")]
@@ -65,7 +65,7 @@
        [:h2 "Contact List"]
        ;[:button {:on-click #(ws/make-websocket! (str "ws://" (.-host js/location) "/ws") update-messages!)} "Create ws-connection"]
 
-       (for [contact @(subscribe [:contacts])]
+       (for [[id contact] @(subscribe [:contacts])]
          [user-view (:id contact) (:username contact) (:is-online contact)])]
 
        [:div {:style {
@@ -159,9 +159,23 @@
       [main-page]])
 )
 
+(defn- add-message [message]
+  (dispatch [:ws-add-message message]))
+
+(defn- update-online-status [response]
+  (prn "calling update-online-status " response)
+  (dispatch [:ws-update-online-status response]))
+
+(defn- determine-response [response]
+  (println "response " response)
+  (if (some? (:message response))
+    (add-message response)
+    (update-online-status response)))
+
+
 (defn mount-root []
-  (ws/make-websocket! (str "ws://" (.-host js/location) "/ws") #(dispatch [:ws-add-message %]))
-  (r/render [main] (.getElementById js/document "app")))
+  (ws/make-websocket! (str "ws://" (.-host js/location) "/ws") determine-response))
+  (r/render [main] (.getElementById js/document "app"))
 
 (mount-root)
 
