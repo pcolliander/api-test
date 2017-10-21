@@ -1,5 +1,6 @@
 (ns api-test.services.person
   (:require [api-test.db.core :refer [*db*] :as db]
+            [api-test.macros :refer [if-some?]]
             [buddy.hashers :as hashers]
             [conman.core :as conman]))
 
@@ -13,9 +14,8 @@
         {:ok? false :error-message "Wrong password!"})
       {:ok? false :error-message "No such user exists."})))
 
-; use if-some? macro
 (defn signup [username password organisation-id]
-  (if (some? (db/get-person-by-username {:username username} ))
+  (if-some? (db/get-person-by-username {:username username} )
     {:ok? false :error-message "A user with that username exists already"}
 
     (conman/with-transaction [*db*]
