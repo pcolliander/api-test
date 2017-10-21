@@ -1,10 +1,10 @@
 (ns api-test.sidebar
-            (:require 
-              
-              [reagent.core :as r]
-              [re-frame.core :refer [subscribe dispatch dispatch-sync]]))
+  (:require [reagent.core :as r]
+            [re-frame.core :refer [subscribe dispatch dispatch-sync]]))
   
-  
+(defn- online? [id online-user-ids]
+  (some? (some #{id} online-user-ids)))
+
 (defn chat-view [{:keys [id name] }] 
   (let [active-chat @(subscribe [:active-chat])]
     [:span {
@@ -15,11 +15,12 @@
         :on-click  #(dispatch [:change-active-chat id])
        } name ]))
 
-(defn contact-user [{:keys [id username is-online chat-id]}]
+(defn contact-user [{:keys [id username chat-id]}]
   (let [active-chat @(subscribe [:active-chat])
+        online-user-ids @(subscribe [:online-users])
         logged-in-user-id (:id @(subscribe [:logged-in-user]))
         is-current-user (= id logged-in-user-id)
-        is-online (or is-current-user is-online)
+        is-online (online? id online-user-ids)
         contact-has-chat (some #(when (= id (:person-id %)) %) @(subscribe [:contact-chats]))]
 
     [:span {
@@ -42,7 +43,7 @@
      (or username "user-chat")
      (when is-current-user " (you)")]))
 
-(defn direct-message-user [{:keys [user-id username chat-id is-online]}]
+(defn direct-message-user [{:keys [user-id username chat-id]}]
   (let [active-chat @(subscribe [:active-chat])
         logged-in-user-id (:id @(subscribe [:logged-in-user]))
         is-current-user (= user-id logged-in-user-id)

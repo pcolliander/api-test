@@ -33,6 +33,11 @@
     (:ws-messages db)))
 
 (reg-sub
+  :online-users
+  (fn [db]
+    (:online-users db)))
+
+(reg-sub
   :messages-by-chat
   (fn [_ _]
     [(subscribe [:active-chat])

@@ -15,25 +15,29 @@
 (defn- get-person [channel]
   (:identity (async/originating-request channel)))
 
+(defn- get-online-users []
+ (map #(:id (get-person %)) @channels))
+
 (defn connect! [channel]
-  (println "connecting to websocket!")
   (swap! channels conj channel)
 
-  (let [person (get-person channel)
-    response (json/write-str(assoc person :connected true))]
+  (let [online-users get-online-users]
+
+  (println "connecting to websocket!")
+  (println "online-users " online-users)
+
+  (println "json " (json/write-str (online-users)))
 
   (doseq [channel @channels]
-    (async/send! channel response))))
-
+    (async/send! channel (json/write-str (online-users))))))
 
 (defn disconnect! [channel {:keys [code reason]}]
   (swap! channels #(remove #{channel} %))
-
-  (let [person  (get-person channel)
-    response (json/write-str(assoc person :connected false))]
+  (let [online-users get-online-users]
 
   (doseq [channel @channels]
-    (async/send! channel response))))
+    (async/send! channel (json/write-str (online-users))))))
+
 
 (defn notify-clients! [channel msg]
   (let [person (get-person channel)

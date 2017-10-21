@@ -12,6 +12,9 @@
     "Throws an exception if `db` doesn't match the Spec `a-spec`."
       [a-spec db]
         (when-not (s/valid? a-spec db)
+              (println)
+              (println (s/explain-str a-spec db))
+              (println)
               (throw (ex-info (str "spec check failed: " (s/explain-str a-spec db)) {}))))
 
 (def check-spec-interceptor (after (partial check-and-throw :api-test.db/db)))
@@ -42,11 +45,9 @@
 (reg-event-db
   :ws-update-online-status
   chat-interceptors
-  (fn [db [action response]]
-    (let [id (:id response)
-          connected (:connected response)]
-
-      (assoc-in db [:contacts (keyword (str id)) :is-online] connected))))
+  (fn [db [action ids]]
+    (println "calling ws-update")
+      (assoc db :online-users ids)))
 
 ; event handlers
 ; -------------------
@@ -55,6 +56,7 @@
   chat-interceptors
   (fn [db [action message]]
     (let [{:keys [chat-id]} message] 
+      (println "db " db)
       (assoc-in db [:messages chat-id] (conj ((:messages db) chat-id) message))
   )))
 

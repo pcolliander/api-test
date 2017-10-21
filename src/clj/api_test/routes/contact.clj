@@ -9,7 +9,7 @@
           contacts (contact-service/get-all person)
           conv-contacts (into {} (map (juxt :id identity) contacts))]
 
-      (println "conv-contacts " conv-contacts)
+      ;; (println "conv-contacts " conv-contacts)
 
       {:status 200 :body {:contacts contacts :conv-contacts conv-contacts}}))
 )
