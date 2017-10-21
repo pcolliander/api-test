@@ -5,7 +5,7 @@
             [conman.core :as conman]))
 
 (defn get-by-chat [chat-id person]
-  (into [] (db/get-messages-by-chat {:chat-id chat-id :person-id (:id person)} )) )
+  (vec (db/get-messages-by-chat {:chat-id chat-id :person-id (:id person)} )) )
 
  ; need to add a check that the user actually is authorised to post to this chat.
 (defn add-one [person chat-id message]

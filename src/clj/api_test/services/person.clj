@@ -13,6 +13,7 @@
         {:ok? false :error-message "Wrong password!"})
       {:ok? false :error-message "No such user exists."})))
 
+; use if-some? macro
 (defn signup [username password organisation-id]
   (if (some? (db/get-person-by-username {:username username} ))
     {:ok? false :error-message "A user with that username exists already"}

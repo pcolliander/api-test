@@ -20,7 +20,7 @@
   (swap! channels conj channel)
 
   (let [person (get-person channel)
-        response (json/write-str(assoc person :connected true))]
+    response (json/write-str(assoc person :connected true))]
 
   (doseq [channel @channels]
     (async/send! channel response))))
@@ -30,7 +30,7 @@
   (swap! channels #(remove #{channel} %))
 
   (let [person  (get-person channel)
-        response (json/write-str(assoc person :connected false))]
+    response (json/write-str(assoc person :connected false))]
 
   (doseq [channel @channels]
     (async/send! channel response))))

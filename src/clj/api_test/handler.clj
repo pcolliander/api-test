@@ -17,11 +17,7 @@
 
              [immutant.web :as web]
              [immutant.web.middleware :refer [wrap-development]]
-
-             ;; (:gen-class)
-
              [mount.core :as mount]
-             ;; [ring.middleware.reload :refer [wrap-reload]]
              [ring.middleware.params :refer [wrap-params]]
              [ring.middleware.cookies :refer [wrap-cookies]]
              [ring.middleware.json :as json-middleware]
