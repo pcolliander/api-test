@@ -22,6 +22,25 @@
   (fn [db]
     (:users-typing db)))
 
+(reg-sub
+  :users-typing-by-active-chat
+  (fn [_ _]
+    [(subscribe [:active-chat])
+     (subscribe [:users-typing])
+     (subscribe [:logged-in-user]) ])
+
+  (fn [[active-chat users-typing logged-in-user]]
+    (println "users-typing" users-typing)
+    (println "active-chat" active-chat)
+    (println "logged-in-user" logged-in-user)
+    
+    (doall
+    (->> users-typing
+       (distinct)
+       (filter #(= (:chat-id %) active-chat))
+       (filter #(not= (:person-id %) (:id logged-in-user)) ) 
+       ))))
+
 (reg-sub 
   :contact-chats
   (fn [db]

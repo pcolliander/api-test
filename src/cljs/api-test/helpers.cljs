@@ -8,17 +8,16 @@
 (defn user-typing-async []
   (go
     (let [payload (<! typing-chan)]
-      (println "payload in user-typing-async" payload)
-
-      (dispatch [:user-typing payload])
-      (println "send value to the server that the user is typing")
+      (dispatch [:user-typing payload]) ; send value over websocket to the server that the user is typing.
       (loop []
-        (let [[value channel] (alts! [typing-chan (timeout 500)])]
-            (cond 
-              (nil? value) (do (println "send value to the server that the user stopped typing. start from the beginning") (dispatch [:user-stopped-typing payload]) (user-typing-async)) 
-              (some? value) (do (println "start from the loop []") (recur))))))))
+        (let [[v c] (alts! [typing-chan (timeout 1300)])]
+            (cond
+              (nil? v) (do 
+                         (dispatch [:user-stopped-typing payload]) ;  send value to the server that the user stopped typing.   
+                         (user-typing-async)) ; start from the beginning of the function with a blocking take. 
+              :else ; try again to see if there's a value on the typing channel before 1300ms has passed. (Starts from the loop [].)
+                (recur)))))))
        
-;; (event-handling)
 (defn determine-response [response]
   (case (:action response)
     "user-typing" (dispatch [:set-user-is-typing response])

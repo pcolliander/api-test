@@ -9,11 +9,13 @@
 
 (defn component []
   (let [value (r/atom "")
+        logged-in-user @(subscribe [:logged-in-user])
         add-message #(if-not (-> % .-shiftKey)
                         (let [passed-value (-> % .-target .-value clojure.string/trim)]
                           (dispatch [:add-message {:chat-message passed-value :chat-id @(subscribe [:active-chat])}])
                           (reset! value "")))]
     (user-typing-async)
+    (println "logged-in-user " logged-in-user)
     (fn []
       [:div {:style {
                :display "flex"
@@ -43,8 +45,7 @@
           (when @(subscribe [:users-typing])
             [:span {:style {:font-style "italic" }}
 
-             (->> @(subscribe [:users-typing])
-               (distinct)
+             (->> @(subscribe [:users-typing-by-active-chat])
                (map #(str (:username %) " is typing... ") ))])
 
           (when @(subscribe [:active-chat])
