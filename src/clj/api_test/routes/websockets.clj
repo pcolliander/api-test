@@ -20,33 +20,66 @@
 
 (defn connect! [channel]
   (swap! channels conj channel)
+  (println "connecting to websocket!")
 
   (let [online-users get-online-users]
-
-  (println "connecting to websocket!")
-  (println "online-users " online-users)
-
-  (println "json " (json/write-str (online-users)))
-
-  (doseq [channel @channels]
-    (async/send! channel (json/write-str (online-users))))))
+    (doseq [channel @channels]
+      (async/send! channel (json/write-str {:action "online-status" :payload {:users-ids (online-users)}})))))
 
 (defn disconnect! [channel {:keys [code reason]}]
   (swap! channels #(remove #{channel} %))
   (let [online-users get-online-users]
 
   (doseq [channel @channels]
-    (async/send! channel (json/write-str (online-users))))))
+    (async/send! channel (json/write-str {:action "online-status" :payload {:users-ids (online-users)}})))))
+
+(defn- send-new-chat-message [person {:keys [action payload]}]
+  (let [{:keys [chat-id message]} payload
+        {:keys [id timestamp]} (message-service/add-one person chat-id message)
+        response (json/write-str {:action action
+                                  :payload {:chat-id chat-id
+                                            :id id
+                                            :message message
+                                            :person-id (:id person)
+                                            :timestamp timestamp
+                                            :username (:username person)}})]
+
+  (doseq [channel @channels]
+    (async/send! channel response))))
+
+
+(defn- send-user-is-typing [person {:keys [action payload]}]
+  (let [{:keys [chat-id]} payload
+        response (json/write-str {:action action
+                                  :payload {:chat-id chat-id
+                                            :person-id (:id person)
+                                            :username (:username person)}})]
+
+  (doseq [channel @channels]
+    (async/send! channel response))))
+
+(defn- send-user-stopped-typing [person {:keys [action payload]}]
+  (let [{:keys [chat-id]} payload
+        response (json/write-str {:action action
+                                  :payload {:chat-id chat-id
+                                            :person-id (:id person)
+                                            :username (:username person)}})]
+
+  (doseq [channel @channels]
+    (async/send! channel response))))
+
 
 
 (defn notify-clients! [channel msg]
   (let [person (get-person channel)
-        {:keys [chat-id message]} (:message (json/read-str msg :key-fn keyword))
-        {:keys [id timestamp]} (message-service/add-one person chat-id message)
-        response (json/write-str {:message message :id id :timestamp timestamp :chat-id chat-id :username (:username person) :person-id (:id person) })]
+        msg (json/read-str msg :key-fn keyword)
+        {:keys [action]} msg]
 
-  (doseq [channel @channels]
-    (async/send! channel response))))
+  (case action
+    "user-typing" (send-user-is-typing person msg)
+    "user-stopped-typing" (send-user-stopped-typing person msg)
+    "new-chat-message" (send-new-chat-message person msg))))
+
 
 (def websocket-callbacks
   {:on-open connect!

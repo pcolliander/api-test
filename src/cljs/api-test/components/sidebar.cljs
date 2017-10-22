@@ -29,8 +29,9 @@
                 :flex-direction "column"
                 :margin-left "1.5rem" }}
          [:h2 "Direct Messages"]
+         (doall 
          (->> @(subscribe [:contact-chats])
-             (map person-chat/component))]
+             (map person-chat/component)))]
 
        [:div {:style {:display "flex"
                       :flex-direction "column"

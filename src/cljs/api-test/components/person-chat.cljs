@@ -21,11 +21,12 @@
 
 (defn component [{:keys [id person-id username chat-id]}]
   (let [person-id (or id person-id)
-        is-current-user (current-user? id) 
-        is-online (online? id)
+        is-current-user (current-user? person-id) 
+        is-online (online? person-id)
         is-active-chat (active-chat? chat-id)
-        contact-chat (get-contact-chat id)]
+        contact-chat (get-contact-chat person-id)]
 
+    (println "chat-id in person-chat " chat-id)
     [:span {
        :style {
          :background (when is-active-chat "#6698c8")

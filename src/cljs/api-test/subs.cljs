@@ -17,6 +17,11 @@
   (fn [db]
     (:contacts db)))
 
+(reg-sub
+  :users-typing
+  (fn [db]
+    (:users-typing db)))
+
 (reg-sub 
   :contact-chats
   (fn [db]
