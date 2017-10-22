@@ -79,10 +79,10 @@
   :ws-add-message
   chat-interceptors
   (fn [db [action message]]
-    (let [{:keys [chat-id]} message]
-      ;; (println "db " db)
-      (println "message " message)
-      (assoc-in db [:messages chat-id] (conj ((:messages db) chat-id) message)))))
+    (let [payload (:payload message)
+         {:keys [chat-id]} payload]
+      (assoc-in db [:messages chat-id] (conj ((:messages db) chat-id) payload )))))
+
 
 (reg-event-db
   :ws-update-online-status

@@ -9,14 +9,16 @@
 
 (defn component []
   (let [value (r/atom "")
-        logged-in-user @(subscribe [:logged-in-user])
         add-message #(if-not (-> % .-shiftKey)
                         (let [passed-value (-> % .-target .-value clojure.string/trim)]
                           (dispatch [:add-message {:chat-message passed-value :chat-id @(subscribe [:active-chat])}])
                           (reset! value "")))]
     (user-typing-async)
-    (println "logged-in-user " logged-in-user)
     (fn []
+      (let [active-chat @(subscribe [:active-chat])
+            chats @(subscribe [:chats])
+            contact-chats @(subscribe [:contact-chats]) ]
+
       [:div {:style {
                :display "flex"
                :flex-direction "column"
@@ -28,9 +30,8 @@
                  :padding "1rem"
                }}
 
-             ; find macro
-             [:span (or (:name (some #(when (= @(subscribe [:active-chat]) (:id %)) %) @(subscribe [:chats])))
-                        (:username (some #(when (= @(subscribe [:active-chat]) (:chat-id %)) %) @(subscribe [:contacts])))) ]]
+             [:span (or (:username (some #(when (= active-chat (:chat-id %)) %) contact-chats))
+                        (:name (some #(when (= active-chat (:id %)) %) chats)) )]]
 
           (into [:div
                    {:style {
@@ -42,7 +43,7 @@
                  (->> @(subscribe [:messages-by-chat])
                    (map message-view/component)))
 
-          (when @(subscribe [:users-typing])
+          (when @(subscribe [:users-typing-by-active-chat])
             [:span {:style {:font-style "italic" }}
 
              (->> @(subscribe [:users-typing-by-active-chat])
@@ -54,11 +55,11 @@
                      :width "100%" }
                    :on-change (fn [event]
                                (reset! value (-> event .-target .-value))
-                               (go
-                                 (>! typing-chan {:action "user-typing" :payload {:chat-id @(subscribe [:active-chat])}})))
+                               (go (>! typing-chan {:action "user-typing" :payload {:chat-id @(subscribe [:active-chat])}})))
 
                    :on-key-down #(case (.-which %)
                                    13  (add-message %)
                                    nil)
                    :placeholder "Write your message here."
-                   :value @value }])])))
+                   :value @value }])]))))
+
