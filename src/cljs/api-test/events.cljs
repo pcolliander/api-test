@@ -81,7 +81,10 @@
   (fn [db [action message]]
     (let [payload (:payload message)
          {:keys [chat-id]} payload]
+
       (assoc-in db [:messages chat-id] (conj ((:messages db) chat-id) payload )))))
+
+
 
 
 (reg-event-db

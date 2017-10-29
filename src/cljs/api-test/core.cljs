@@ -8,7 +8,6 @@
             [reagent.core :as r]
             [re-frame.core :refer [subscribe dispatch dispatch-sync]]))
 
-
 (enable-console-print!)
 
 (defn main []

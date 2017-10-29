@@ -39,7 +39,10 @@
 (reg-sub 
   :contact-chats
   (fn [db]
-    (:contact-chats (:all-chats db))))
+    (let [contact-chats (:contact-chats (:all-chats db))
+          self-chat (:self-chat (:all-chats db))]
+
+      (conj contact-chats self-chat))))
 
 (reg-sub
   :messages

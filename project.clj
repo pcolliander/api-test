@@ -50,41 +50,34 @@
 
   :main api-test.handler/start
 
-  :figwheel
-		{:http-server-root "public"
-		 :nrepl-port 7002
-		 :css-dirs ["resources/public/css"]
-		 :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
+  :figwheel {
+             :http-server-root "public"
+             :nrepl-port 7002
+             :css-dirs ["resources/public/css"]
+             :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
   :clean-targets [:target-path "out"]
-	:cljsbuild
-	{:builds
-		 {:app
-			{:source-paths ["src/cljs" "src/cljs/api-test"]
-       :figwheel {:on-jsload "api-test.core/mount-root"}
-			 :compiler
-										 {:main          "api-test.core"
-											:asset-path    "/js/out"
-                      :preloads      [re-frisk.preload]
-											:output-to     "target/cljsbuild/public/js/app.js"
-											:output-dir    "target/cljsbuild/public/js/out"
-											:optimizations :none
-											:source-map    true}}
-			:min
-			{:source-paths ["src/cljs/" "src/cljs/api-test"]
-			 :compiler
-										 {:output-to     "target/cljsbuild/public/js/app.js"
-                      :preloads      [re-frisk.preload]
-											:output-dir    "target/uberjar"
-											:externs       ["react/externs/react.js"]
-											:optimizations :none}}}}
+  :cljsbuild {
+              :builds [{
+                        :id "dev"
+                        :source-paths ["src/cljs"]
+                        :figwheel {:on-jsload "api-test.core/mount-root"}
+                        :compiler {
+                                   :main             "api-test.core"
+                                   :asset-path       "/js/out"
+                                   :closure-defines  {"re_frame.trace.trace_enabled_QMARK_" true}
+                                   :output-to        "target/cljsbuild/public/js/app.js"
+                                   :output-dir       "target/cljsbuild/public/js/out"
+                                   :optimizations    :none
+                                   :preloads         [day8.re-frame.trace.preload]
+                                   :source-map       true}}]}
 
   :profiles
-    {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
-                        [ring/ring-mock "0.3.0"]
-                        [re-frisk "0.5.0"]
-                        [org.clojure/test.check "0.9.0"] ]}
+  {:dev {:dependencies[[javax.servlet/servlet-api "2.5"]
+                       [ring/ring-mock "0.3.0"]
+                       [day8.re-frame/trace "0.1.11"]
+                       [re-frisk "0.5.0"]
+                       [org.clojure/test.check "0.9.0"] ]}
 
-   :uberjar { :prep-tasks ["compile" ["cljsbuild" "once" "min"]]}
-   })
+   :uberjar { :prep-tasks ["compile" ["cljsbuild" "once" "min"]]} })
 

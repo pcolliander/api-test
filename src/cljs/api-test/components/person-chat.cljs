@@ -26,7 +26,6 @@
         is-active-chat (active-chat? chat-id)
         contact-chat (get-contact-chat person-id)]
 
-    (println "chat-id in person-chat " chat-id)
     [:span {
        :style {
          :background (when is-active-chat "#6698c8")

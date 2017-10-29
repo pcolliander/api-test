@@ -1,8 +1,9 @@
 (ns api-test.chat-window
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require
+    [clojure.string :as str]
     [api-test.message-view :as message-view]
-    [api-test.helpers :refer [user-typing-async typing-chan]]
+    [api-test.helpers :refer [user-typing-async typing-chan just-send-a-message-chan]]
     [cljs.core.async :as async :refer [<! >! put! chan alts! timeout]]
     [reagent.core :as r]
     [re-frame.core :refer [subscribe dispatch]]))
@@ -12,6 +13,7 @@
         add-message #(if-not (-> % .-shiftKey)
                         (let [passed-value (-> % .-target .-value clojure.string/trim)]
                           (dispatch [:add-message {:chat-message passed-value :chat-id @(subscribe [:active-chat])}])
+                          (go (>! just-send-a-message-chan {:action "user-typing" :payload {:chat-id @(subscribe [:active-chat])}}))
                           (reset! value "")))]
     (user-typing-async)
     (fn []
@@ -47,7 +49,8 @@
             [:span {:style {:font-style "italic" }}
 
              (->> @(subscribe [:users-typing-by-active-chat])
-               (map #(str (:username %) " is typing... ") ))])
+               (map :username)
+               (map #(str % " is typing...")))])
 
           (when @(subscribe [:active-chat])
             [:input {:style {
