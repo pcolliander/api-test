@@ -12,9 +12,6 @@
     "Throws an exception if `db` doesn't match the Spec `a-spec`."
       [a-spec db]
         (when-not (s/valid? a-spec db)
-              (println)
-              (println (s/explain-str a-spec db))
-              (println)
               (throw (ex-info (str "spec check failed: " (s/explain-str a-spec db)) {}))))
 
 (def check-spec-interceptor (after (partial check-and-throw :api-test.db/db)))
@@ -81,11 +78,19 @@
   (fn [db [action message]]
     (let [payload (:payload message)
          {:keys [chat-id]} payload]
-
       (assoc-in db [:messages chat-id] (conj ((:messages db) chat-id) payload )))))
 
+(reg-event-db
+  :ws-new-message-in-different-chat
+  chat-interceptors
+  (fn [db [action chat-id]]
+    (update-in db [:new-messages-in-other-chat] conj chat-id)))
 
-
+(reg-event-db
+  :clear-new-messages-in-other-chat
+  chat-interceptors
+  (fn [db [action chat-id]]
+     (update-in db [:new-messages-in-other-chat] #(remove #{chat-id} %))))
 
 (reg-event-db
   :ws-update-online-status
@@ -96,8 +101,6 @@
 
 ; event handlers
 ; -------------------
-
-;--------------------
 (reg-event-fx
   :add-chat-with-contact
   chat-interceptors
@@ -108,6 +111,7 @@
 
 (reg-event-db
   :add-chat-with-contact-success
+  chat-interceptors
   (fn [db [action response-body]]
     (let [chat (:chat response-body)]
       (update-in db [:all-chats :contact-chats] conj chat))))
@@ -116,7 +120,6 @@
   :change-active-chat
   chat-interceptors
   (fn [{db :db} [action id]]
-    (println "db " db)
     {:dispatch [:get-messages id]
      :db (assoc db :active-chat id) }))
 
@@ -173,8 +176,10 @@
   chat-interceptors
   (fn [db [action response-body]]
     (let [username (:username (:data response-body))
-          id (:id (:data response-body))]
-      (assoc-in db [:logged-in-user] {:id id :username (clojure.string/capitalize username)}))))
+          id (:id (:data response-body))
+          login-time (:login-time (:data response-body))]
+
+      (assoc-in db [:logged-in-user] {:id id :login-time login-time :username (clojure.string/capitalize username)}))))
 
 (reg-event-fx
   :get-user-meta-data

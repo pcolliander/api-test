@@ -61,7 +61,7 @@
 (def app
   (-> app-routes
     (wrap-development)
-    ;; (print-identity)
+    (print-identity)
 
     (wrap-authentication jwt-token-backend)
     (set-authorisation-header-from-cookie)

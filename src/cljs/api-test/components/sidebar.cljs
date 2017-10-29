@@ -6,6 +6,8 @@
 
 (defn component []
   (let [value (r/atom "")]
+    (println "new messages in other chat " @(subscribe [:new-messages-in-other-chat]))
+
     [:div {:style {
              :background "#303E4D"
              :color "#c1c5ca"

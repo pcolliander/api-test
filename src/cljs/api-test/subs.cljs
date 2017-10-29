@@ -22,6 +22,19 @@
   (fn [db]
     (:users-typing db)))
 
+
+; do later, may be complex.
+;; (reg-sub
+;;   :new-messages-since-login
+;;   (fn [db]
+;;     (println "db " db)
+;;     ()))
+
+(reg-sub
+  :new-messages-in-other-chat
+  (fn [db]
+    (:new-messages-in-other-chat db)))
+
 (reg-sub
   :users-typing-by-active-chat
   (fn [_ _]

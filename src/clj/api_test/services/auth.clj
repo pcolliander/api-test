@@ -8,6 +8,7 @@
   (jwt/sign {:id id
              :organisation-id organisation-id
              :username username
+             :login-time (timec/to-timestamp (time/now))
              :exp (timec/to-timestamp (time/plus (time/now ) (time/hours 3)))}
     (environment :secret-key)))
 

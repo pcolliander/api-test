@@ -19,30 +19,44 @@
   (let [contact-chats @(subscribe [:contact-chats])]
     (some #(when (= person-id (:person-id %)) %) contact-chats)))
 
+(defn- unseen-messages-in-chat [chat-id]
+  (let [unseen-chats @(subscribe [:new-messages-in-other-chat])]
+    (count (filter #{chat-id} unseen-chats))))
+
+
 (defn component [{:keys [id person-id username chat-id]}]
   (let [person-id (or id person-id)
-        is-current-user (current-user? person-id) 
+        is-current-user (current-user? person-id)
         is-online (online? person-id)
         is-active-chat (active-chat? chat-id)
-        contact-chat (get-contact-chat person-id)]
+        contact-chat (get-contact-chat person-id)
+        unseen-messages-in-chat (unseen-messages-in-chat chat-id)
+        has-unseen-messages (< 0 unseen-messages-in-chat) ]
 
     [:span {
        :style {
          :background (when is-active-chat "#6698c8")
-         :color (when is-active-chat "white")
+         :color (when has-unseen-messages "white")
          :cursor "pointer"
          :user-select "none" }
        :on-click #(if (some? chat-id) ; if-some? macro
-                    (dispatch [:change-active-chat chat-id])
+                    (do
+                      (dispatch [:change-active-chat chat-id])
+                      (dispatch [:clear-new-messages-in-other-chat chat-id]))
+
                     (if (some? contact-chat)
-                      (dispatch [:change-active-chat (:chat-id contact-chat)]) 
+                      (dispatch [:change-active-chat (:chat-id contact-chat)])
                       (dispatch [:add-chat-with-contact person-id]))) }
 
       [:i {:class (if is-online "fa fa-circle" "fa fa-circle-o" )
         :style {
           :color (when is-online "#1db91d")
           :font-size "small"
-          :margin-right "0.4rem"}}]  
+          :margin-right "0.4rem"}}]
 
-     username (when is-current-user " (you)")]))
+     username (when is-current-user " (you)")
+
+     (when has-unseen-messages (str " (" unseen-messages-in-chat ")")) ]))
+
+
 
