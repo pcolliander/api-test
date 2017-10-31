@@ -8,14 +8,14 @@
      (js->clj (.parse js/JSON (-> msg .-data)) :keywordize-keys true ))))
 
 (defn send-transit-msg! [msg]
-  (println "msg in send-transit-msg! " msg)
+  ;; (println "msg in send-transit-msg! " msg)
   (let [json (.stringify js/JSON (clj->js msg))]
     (if @ws-chan
       (.send @ws-chan json)
       (throw (js/Error "websocket is not available")))))
 
 (defn make-websocket! [url receive-handler]
-  (println "attempting to connect websocket")
+  ;; (println "attempting to connect websocket")
   (if-not @ws-chan  ; otherwise it opens multiple when saving, non-reloadable code (figwheel).
     (if-let [chan (js/WebSocket. url)]
       (do

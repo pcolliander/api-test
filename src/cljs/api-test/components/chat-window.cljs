@@ -16,53 +16,62 @@
                           (go (>! just-send-a-message-chan {:action "user-typing" :payload {:chat-id @(subscribe [:active-chat])}}))
                           (reset! value "")))]
     (user-typing-async)
-    (fn []
-      (let [active-chat @(subscribe [:active-chat])
-            chats @(subscribe [:chats])
-            contact-chats @(subscribe [:contact-chats]) ]
 
-      [:div {:style {
-               :display "flex"
-               :flex-direction "column"
-               :width "100%"
-            }}
+      (r/create-class
+        {:component-will-receive-props
+          #(println ":component-will-receive-props")
+        
+         :component-did-mount
+           #(println ":component-did-mount")
 
-          [:div {:style {
-                 :border-bottom "1px solid #e3e3e3"
-                 :padding "1rem"
-               }}
+         :reagent-render
+           (fn []
+             (let [active-chat @(subscribe [:active-chat])
+                   chats @(subscribe [:chats])
+                   contact-chats @(subscribe [:contact-chats]) ]
 
-             [:span (or (:username (some #(when (= active-chat (:chat-id %)) %) contact-chats))
-                        (:name (some #(when (= active-chat (:id %)) %) chats)) )]]
+               [:div {:style {
+                              :display "flex"
+                              :flex-direction "column"
+                              :width "100%" }}
 
-          (into [:div
-                   {:style {
-                     :color "gray"
-                     :height "100vh"
-                     :overflow-y "scroll"
-                     :margin "1rem" }}]
+                [:div {:style {
+                               :border-bottom "1px solid #e3e3e3"
+                               :padding "1rem" }}
 
-                 (->> @(subscribe [:messages-by-chat])
-                   (map message-view/component)))
+                 [:span (or (:username (some #(when (= active-chat (:chat-id %)) %) contact-chats))
+                            (:name (some #(when (= active-chat (:id %)) %) chats)) )]]
 
-          (when @(subscribe [:users-typing-by-active-chat])
-            [:span {:style {:font-style "italic" }}
+                (into [:div
+                       {:style {
+                                :color "gray"
+                                :height "100vh"
+                                :overflow-y "scroll"
+                                :margin "1rem" }}]
 
-             (->> @(subscribe [:users-typing-by-active-chat])
-               (map :username)
-               (map #(str % " is typing...")))])
+                      (->> @(subscribe [:messages-by-chat])
+                           (map message-view/component)))
 
-          (when @(subscribe [:active-chat])
-            [:input {:style {
-                     :padding "1rem"
-                     :width "100%" }
-                   :on-change (fn [event]
-                               (reset! value (-> event .-target .-value))
-                               (go (>! typing-chan {:action "user-typing" :payload {:chat-id @(subscribe [:active-chat])}})))
+                (when @(subscribe [:users-typing-by-active-chat])
+                  [:span {:style {:font-style "italic" }}
 
-                   :on-key-down #(case (.-which %)
-                                   13  (add-message %)
-                                   nil)
-                   :placeholder "Write your message here."
-                   :value @value }])]))))
+                   (->> @(subscribe [:users-typing-by-active-chat])
+                        (map :username)
+                        (map #(str % " is typing...")))])
+
+                (when @(subscribe [:active-chat])
+                  [:input {:style {
+                                   :padding "1rem"
+                                   :width "100%" }
+                           :on-change (fn [event]
+                                        (reset! value (-> event .-target .-value))
+                                        (go (>! typing-chan {:action "user-typing" :payload {:chat-id @(subscribe [:active-chat])}})))
+
+                           :on-key-down #(case (.-which %)
+                                           13  (add-message %)
+                                           nil)
+                           :placeholder "Write your message here."
+                           :value @value }])]))
+
+           })))
 

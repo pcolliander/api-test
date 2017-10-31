@@ -22,14 +22,6 @@
   (fn [db]
     (:users-typing db)))
 
-
-; do later, may be complex.
-;; (reg-sub
-;;   :new-messages-since-login
-;;   (fn [db]
-;;     (println "db " db)
-;;     ()))
-
 (reg-sub
   :new-messages-in-other-chat
   (fn [db]
@@ -55,7 +47,7 @@
     (let [contact-chats (:contact-chats (:all-chats db))
           self-chat (:self-chat (:all-chats db))]
 
-      (conj contact-chats self-chat))))
+      (flatten (conj [self-chat] contact-chats)))))
 
 (reg-sub
   :messages

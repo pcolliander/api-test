@@ -16,7 +16,7 @@
         chat-id)))
 
 (defn get-all [person]
-  (let [chats (db/get-chats {:person-id (:id person)})
+  (let [chats (db/get-chats {:organisation-id (:organisation-id person)})
         contact-chats (db/get-contact-chats {:person-id (:id person)})
         self-chat (db/get-self-chat {:person-id (:id person)})]
 

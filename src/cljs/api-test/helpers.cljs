@@ -35,7 +35,7 @@
       (dispatch [:ws-new-message-in-different-chat chat-id-in-response]))))
 
 (defn determine-response [response]
-  (println (:action response))
+  ;; (println (:action response))
   (case (:action response)
     "user-typing" (dispatch [:set-user-is-typing response])
     "user-stopped-typing" (dispatch [:set-user-stopped-typing response])

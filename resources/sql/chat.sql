@@ -23,8 +23,7 @@ VALUES (:chat-id, :person-id)
 -- :name get-chats :? :*
 -- :doc gets all the public chats the user has access to.
 SELECT id, name, is_private FROM chat
-INNER JOIN chat_permission ON chat.id = chat_permission.chat_id
-WHERE person_id = :person-id
+WHERE chat.organisation_id = :organisation-id AND chat.is_private = FALSE
 
 -- :name get-contact-chats :? :*
 -- :doc gets all the contact chats the user has initiated/been initiated.
