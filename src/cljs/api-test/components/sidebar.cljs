@@ -5,52 +5,65 @@
             [re-frame.core :refer [subscribe dispatch dispatch-sync]]))
 
 (defn component []
-  (let [value (r/atom "")]
-    (println "new messages in other chat " @(subscribe [:new-messages-in-other-chat]))
+  (let [value (r/atom "")
+        contacts-visible? (r/atom false)]
 
-    [:div {:style {
-             :background "#303E4D"
-             :color "#c1c5ca"
-             :display "flex"
-             :flex-direction "column"
-             :justify-content "space-evenly"
-             :width "18%" }}
+    (fn []
+      (println "contacts-visible? " @contacts-visible?)
+      [:div {:style {
+               :background "#303E4D"
+               :color "#c1c5ca"
+               :display "flex"
+               :flex-direction "column"
+               :justify-content "space-evenly"
+               :width "18%" }}
 
-     [:div {:style {
-              :display "flex"
-              :flex-direction "column"
-              :margin-left "1.5rem" }}
+       (when @contacts-visible?
+         [:div {:style {
+                  :display "flex"
+                  :flex-direction "column"
+                  :margin-left "1.5rem" }}
 
-       [:h2 "Contact List"]
+           [:h2 "Contact List"]
 
-       (for [[id contact] @(subscribe [:contacts])]
-         [person-chat/component contact])]
+           (for [[id contact] @(subscribe [:contacts])]
+             [person-chat/component contact])])
 
-       [:div {:style {
-                :display "flex"
-                :flex-direction "column"
-                :margin-left "1.5rem" }}
-         [:h2 "Direct Messages"]
-         (doall 
-         (->> @(subscribe [:contact-chats])
-             (map person-chat/component)))]
+         (into [:div {:style {
+                        :display "flex"
+                        :flex-direction "column"
+                        :margin-left "1.5rem" }}
 
-       [:div {:style {:display "flex"
-                      :flex-direction "column"
-                      :margin-left "1.5rem" }}
+           [:span {:style {:align-items "baseline" :display "flex" }}
 
-         [:div {:style {:align-items "center" :display "flex" }}
-          [:h2 "Chats"]
-          [:span {:style {
-                    :color "white"
-                    :cursor "pointer"
-                    :font-weight "bold"
-                    :font-size "xx-large"
-                    :user-select "none"
-                    :margin-left "0.3rem" }
-                  :on-click #(dispatch [:add-chat @value])
-                 } "+"]
-           [:input {:style {:margin-left "0.5rem"} :placeholder "chat name" :on-change #(reset! value (-> % .-target .-value ))}]
-         ]
-          (into [:idv {:style {:display "flex" :flex-direction "column" }}] (map chat-icon/component @(subscribe [:chats]))) ]]))
+             [:h2 {:style {:margin "0px 5px 1rem 0px" }}
+              "Direct Messages" ]
+
+             [:i {:class  "fa fa-plus"
+                  :style {:cursor "pointer"}
+                  :on-click #(swap! contacts-visible? not)
+
+                  }] ]
+
+           (->> @(subscribe [:contact-chats])
+               (map person-chat/component))])
+
+         [:div {:style {:display "flex"
+                        :flex-direction "column"
+                        :margin-left "1.5rem" }}
+
+           [:div {:style {:align-items "center" :display "flex" }}
+            [:h2 "Chats"]
+            [:span {:style {
+                      :color "white"
+                      :cursor "pointer"
+                      :font-weight "bold"
+                      :font-size "xx-large"
+                      :user-select "none"
+                      :margin-left "0.3rem" }
+                    :on-click #(dispatch [:add-chat @value])
+                   } "+"]
+             [:input {:style {:margin-left "0.5rem"} :placeholder "chat name" :on-change #(reset! value (-> % .-target .-value ))}]
+           ]
+            (into [:idv {:style {:display "flex" :flex-direction "column" }}] (map chat-icon/component @(subscribe [:chats]))) ]])))
 

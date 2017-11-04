@@ -6,11 +6,11 @@
     (and active-chat (= chat-id active-chat))))
 
 (defn component [{:keys [id name] }] 
-  (let [is-active-chat (active-chat? id)]
+  (let [active-chat? (active-chat? id)]
     [:span {
         :style {
-          :background (when is-active-chat "#6698c8")
-          :color (when is-active-chat "white") 
+          :background (when active-chat? "#6698c8")
+          :color (when active-chat? "white") 
           :cursor "pointer"
           :user-select "none" } 
         :on-click  #(dispatch [:change-active-chat id])
