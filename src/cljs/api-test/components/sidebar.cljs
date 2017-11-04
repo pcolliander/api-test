@@ -29,7 +29,7 @@
            (for [[id contact] @(subscribe [:contacts])]
              [person-chat/component contact])])
 
-         (into [:div {:style {
+         [:div {:style {
                         :display "flex"
                         :flex-direction "column"
                         :margin-left "1.5rem" }}
@@ -39,14 +39,14 @@
              [:h2 {:style {:margin "0px 5px 1rem 0px" }}
               "Direct Messages" ]
 
-             [:i {:class  "fa fa-plus"
+             [:i {:class "fa fa-plus"
                   :style {:cursor "pointer"}
-                  :on-click #(swap! contacts-visible? not)
+                  :on-click #(swap! contacts-visible? not) }]]
 
-                  }] ]
-
-           (->> @(subscribe [:contact-chats])
-               (map person-chat/component))])
+           (into [:div 
+             (->> @(subscribe [:contact-chats])
+               (map person-chat/component))])]
+               
 
          [:div {:style {:display "flex"
                         :flex-direction "column"
