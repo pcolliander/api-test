@@ -7,7 +7,7 @@
              [api-test.routes.public :refer [public-routes]]
              [api-test.routes.websockets :refer [websocket-routes]]
 
-             [buddy.auth :refer [authenticated?]]
+             [buddy.auth :refer [authenticated? throw-unauthorized]]
              [buddy.auth.accessrules :refer [restrict]]
              [buddy.auth.backends :as backends]
              [buddy.auth.middleware :refer [wrap-authentication wrap-authorization]]
@@ -28,11 +28,19 @@
 (defn- print-identity [handler] ; debug
   (fn [request]
     (println)
-    (println "identity: " (:identity request))
-    (println "authenticated? " (authenticated? request))
+    ;; (println "identity: " (:identity request))
+    ;; (println "authenticated? " (authenticated? request))
     ;; (println "req " request)
     (println)
     (handler request)))
+
+(defn- verify-requested-with-header-present [handler]
+  (fn [request]
+    (let [requested-with-header (get-in request [:headers "x-requested-with"]) ]
+
+      (if (= requested-with-header "XMLHttpRequest")
+          (handler request)
+          (throw-unauthorized {:message "x-requested-with: XMLHttpRequest not in header."}) ))))
 
 (defn- set-authorisation-header-from-cookie [handler]
   (fn [request]
@@ -40,7 +48,7 @@
       (handler (assoc-in request [:headers "authorization"] (str "Token " token)))
       (handler request))))
 
-(defn- my-unauthorized-handler [request metadata] 
+(defn- my-unauthorized-handler [request metadata]
   {:status 401})
 
 (defn- wrap-restricted [handler]
@@ -50,9 +58,10 @@
 (def jwt-token-backend (backends/jws {:secret (environment :secret-key) }))
 
 (defroutes secured-routes
-  chat-routes contact-routes message-routes self-routes)
+  (-> (routes chat-routes contact-routes message-routes self-routes)
+    (wrap-routes verify-requested-with-header-present)))
 
-(defroutes app-routes 
+(defroutes app-routes
   public-routes
   (-> (routes secured-routes websocket-routes)
     (wrap-routes wrap-restricted))
@@ -60,8 +69,8 @@
 
 (def app
   (-> app-routes
-    (wrap-development)
     (print-identity)
+    (wrap-development)
 
     (wrap-authentication jwt-token-backend)
     (set-authorisation-header-from-cookie)

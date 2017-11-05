@@ -9,7 +9,6 @@
         contacts-visible? (r/atom false)]
 
     (fn []
-      (println "contacts-visible? " @contacts-visible?)
       [:div {:style {
                :background "#303E4D"
                :color "#c1c5ca"
@@ -43,10 +42,9 @@
                   :style {:cursor "pointer"}
                   :on-click #(swap! contacts-visible? not) }]]
 
-           (into [:div 
              (->> @(subscribe [:contact-chats])
-               (map person-chat/component))])]
-               
+               (map person-chat/component)
+               (doall))]
 
          [:div {:style {:display "flex"
                         :flex-direction "column"
@@ -65,5 +63,5 @@
                    } "+"]
              [:input {:style {:margin-left "0.5rem"} :placeholder "chat name" :on-change #(reset! value (-> % .-target .-value ))}]
            ]
-            (into [:idv {:style {:display "flex" :flex-direction "column" }}] (map chat-icon/component @(subscribe [:chats]))) ]])))
+            (into [:div {:style {:display "flex" :flex-direction "column" }}] (map chat-icon/component @(subscribe [:chats]))) ]])))
 

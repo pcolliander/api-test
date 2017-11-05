@@ -19,6 +19,7 @@
       (render-file "templates/index.html" {})
       (redirect "/login")))
 
+
   (POST "/organisation" [name]
         (println "organisation-name " name)
         (organisation-service/add-organisation name)

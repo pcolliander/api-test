@@ -30,19 +30,17 @@
                    chats @(subscribe [:chats])
                    contact-chats @(subscribe [:contact-chats]) ]
 
-               [:div {:style {
-                              :display "flex"
+               [:div {:style {:display "flex"
                               :flex-direction "column"
                               :width "100%" }}
 
-                [:div {:style {
-                               :border-bottom "1px solid #e3e3e3"
+                [:div {:style {:border-bottom "1px solid #e3e3e3"
                                :padding "1rem" }}
 
                  [:span (or (:username (some #(when (= active-chat (:chat-id %)) %) contact-chats))
                             (:name (some #(when (= active-chat (:id %)) %) chats)) )]]
 
-                (into [:div
+                [:div
                        {:style {
                                 :color "gray"
                                 :height "100vh"
@@ -50,7 +48,7 @@
                                 :margin "1rem" }}]
 
                       (->> @(subscribe [:messages-by-chat])
-                           (map message-view/component)))
+                           (map message-view/component))
 
                 (when @(subscribe [:users-typing-by-active-chat])
                   [:span {:style {:font-style "italic" }}
@@ -71,7 +69,5 @@
                                            13  (add-message %)
                                            nil)
                            :placeholder "Write your message here."
-                           :value @value }])]))
-
-           })))
+                           :value @value }])]))})))
 

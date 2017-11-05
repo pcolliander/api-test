@@ -17,20 +17,24 @@
 (def check-spec-interceptor (after (partial check-and-throw :api-test.db/db)))
 (def chat-interceptors [check-spec-interceptor])
 
+(defn- custom-headers []
+  {:headers 
+    {"X-Requested-With" "XMLHttpRequest"}})
+
 ; own effects handler
 ; -------------------
 (reg-fx
   :http-client-get
 
   (fn [{:keys [url success-handler]}]
-    (go (let [response (<! (http-client/get url))]
+    (go (let [response (<! (http-client/get url (custom-headers)))]
       (dispatch (conj success-handler (:body response)))
     ))))
 
 (reg-fx
   :http-client-post
   (fn [{:keys [url params success-handler]}]
-    (go (let [response (<! (http-client/post url params))]
+    (go (let [response (<! (http-client/post url (conj params (custom-headers) )))]
       (dispatch (conj success-handler (:body response)))
     ))))
 
