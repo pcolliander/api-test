@@ -63,14 +63,16 @@
 
 (defroutes app-routes
   public-routes
-  (-> (routes secured-routes websocket-routes)
+  (-> (routes #'secured-routes #'websocket-routes)
+    (wrap-reload)
     (wrap-routes wrap-restricted))
   (route/not-found "Not Found"))
 
 (def app
-  (-> app-routes
+  (-> #'app-routes
     (print-identity)
     (wrap-development)
+    ;; (wrap-reload)
 
     (wrap-authentication jwt-token-backend)
     (set-authorisation-header-from-cookie)
