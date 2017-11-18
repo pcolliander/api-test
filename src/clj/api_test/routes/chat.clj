@@ -31,6 +31,5 @@
     (let [person (:identity request)
           chat-id (Integer/parseInt (get-in request [:route-params :chat-id]))
           messages (message-service/get-by-chat chat-id person)]
-
     {:status 200 :body {:chat-id chat-id :messages messages }}))
 )

@@ -25,7 +25,6 @@
 ; -------------------
 (reg-fx
   :http-client-get
-
   (fn [{:keys [url success-handler]}]
     (go (let [response (<! (http-client/get url (custom-headers)))]
       (dispatch (conj success-handler (:body response)))

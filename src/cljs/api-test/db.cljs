@@ -1,6 +1,5 @@
 (ns api-test.db
-  (:require [re-frame.core :as re-frame] 
-            [cljs.spec.alpha :as s] ))
+  (:require [cljs.spec.alpha :as s] ))
 
 (s/def ::id nat-int?)
 (s/def ::username string?)

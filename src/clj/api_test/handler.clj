@@ -72,7 +72,6 @@
   (-> #'app-routes
     (print-identity)
     (wrap-development)
-    ;; (wrap-reload)
 
     (wrap-authentication jwt-token-backend)
     (set-authorisation-header-from-cookie)
