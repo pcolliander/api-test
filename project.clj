@@ -27,6 +27,8 @@
                  [ring/ring-defaults "0.2.1"]
                  [selmer "1.10.0"]
 
+                 [com.taoensso/carmine "2.16.0"] ; redis
+
                  ; client-side
                  [org.clojure/clojurescript "1.9.908" :scope "provided"]
                  [org.webjars/font-awesome "4.6.3"]

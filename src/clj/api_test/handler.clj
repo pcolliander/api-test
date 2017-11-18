@@ -15,6 +15,9 @@
              [compojure.core :refer [defroutes wrap-routes routes]]
              [compojure.route :as route]
 
+
+             [taoensso.carmine :as car :refer (wcar)]
+
              [immutant.web :as web]
              [immutant.web.middleware :refer [wrap-development]]
              [mount.core :as mount]
@@ -25,13 +28,30 @@
 
 (mount/start)
 
+
+; Redis
+; ----------
+(def server1-conn {:pool {} :spec {:uri "redis://localhost:6379"}})
+(defmacro wcar* [& body] `(car/wcar server1-conn ~@body))
+; ----------
+
 (defn- print-identity [handler] ; debug
   (fn [request]
-    (println)
+    ;; (println)
     ;; (println "identity: " (:identity request))
     ;; (println "authenticated? " (authenticated? request))
     ;; (println "req " request)
-    (println)
+
+
+    ; REDIS
+    ;; (wcar* (car/sadd "feature-flags" 5 12 2))
+    ;; (println "sismember 2 " (wcar* (car/sismember "feature-flags" 2 )))
+    ;; (println "sismember 3 " (wcar* (car/sismember "feature-flags" 3 )))
+
+    ;; (println (wcar* (car/smembers "feature-flags")))
+    (println (wcar*(car/ping)))
+    ; -----------
+
     (handler request)))
 
 (defn- verify-requested-with-header-present [handler]
@@ -64,7 +84,6 @@
 (defroutes app-routes
   public-routes
   (-> (routes #'secured-routes #'websocket-routes)
-    (wrap-reload)
     (wrap-routes wrap-restricted))
   (route/not-found "Not Found"))
 
@@ -82,5 +101,5 @@
     (json-middleware/wrap-json-response) ))
 
 (defn start []
-  (web/run app))
+  (web/run #'app))
 
