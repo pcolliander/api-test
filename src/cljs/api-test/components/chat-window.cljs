@@ -32,7 +32,8 @@
 
                [:div {:style {:display "flex"
                               :flex-direction "column"
-                              :width "100%" }}
+                              :width "100%" 
+                              :overflow "scroll"}}
 
                 [:div {:style {:border-bottom "1px solid #e3e3e3"
                                :padding "1rem" }}

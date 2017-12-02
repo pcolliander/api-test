@@ -35,11 +35,13 @@
      (subscribe [:logged-in-user]) ])
 
   (fn [[active-chat users-typing logged-in-user]]
-    (doall
-      (->> users-typing
-         (distinct)
-         (filter #(= (:chat-id %) active-chat))
-         (filter #(not= (:person-id %) (:id logged-in-user)))))))
+    (let [xf (comp
+              (distinct)
+              (filter #(= (:chat-id %) active-chat))
+              (filter #(not= (:person-id %) (:id logged-in-user))))]
+
+      (into [] xf users-typing))))
+
 
 (reg-sub 
   :contact-chats
